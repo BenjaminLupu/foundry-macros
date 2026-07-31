@@ -1,4 +1,4 @@
-// À charger une fois par client (module monde ou macro d’amorçage)
+// Load once per client (world module or startup macro)
 
 console.log('Custom | Session starts');
 
@@ -6,49 +6,69 @@ console.log('Custom | Session start macros');
 
 if (!game._whisperReplyHooked) {
 
-    console.log('Custom | Hook on renderChatMessage for whispers');
+    console.log('Custom | Hook on renderChatMessageHTML for whispers');
 
     game._whisperReplyHooked = true;
 
-    Hooks.on("renderChatMessage", (message, $html) => {
+    // renderChatMessage (jQuery-based) has been deprecated since Foundry v13 in favor of
+    // renderChatMessageHTML, which passes the native HTML element directly.
+    Hooks.on("renderChatMessageHTML", (message, html) => {
 
-        const html = $html[0];
-
-        // MASQUAGE DYNAMIQUE : Si l'utilisateur qui regarde le chat log est l'auteur du message,
-        // on lui cache le bouton "Répondre" pour éviter l'auto-réponse.
-        if (message.user.id === game.user.id) {
+        // DYNAMIC HIDING: if the user currently viewing the chat log is the message's author,
+        // hide the "Répondre" (Reply) button from them to prevent replying to themselves.
+        if (message.author.id === game.user.id) {
             html.querySelectorAll(".whisper-reply")?.forEach(btn => {
                 btn.style.display = "none";
             });
         }
 
-        // TITRE DYNAMIQUE : Modifie le titre du message selon que le client actuel est l'envoyeur
-        // (icône 📤) ou le destinataire (icône 📥). Le libellé reste toujours "message"
-        // (jamais "réponse"), qu'il s'agisse d'un message initial ou d'une réponse.
+        // "RÉPONDRE" BUTTON HOVER: a <style> tag placed inside a chat message's content does
+        // not seem to be applied by Foundry (same issue as custom-roll.js's <style> inside a
+        // DialogV2) — so the fill-on-hover effect is implemented with JS listeners instead of
+        // a CSS ":hover" rule. Applies to any private-message card (both the initial send and
+        // any reply).
+        html.querySelectorAll(".fantasy-whisper-reply-btn").forEach(btn => {
+            btn.addEventListener("mouseenter", () => {
+                btn.style.backgroundColor = "rgb(201, 89, 63)";
+                btn.style.borderColor = "rgb(231, 209, 177)";
+                btn.style.color = "#ffffff";
+            });
+            btn.addEventListener("mouseleave", () => {
+                btn.style.backgroundColor = "transparent";
+                btn.style.borderColor = "rgb(159, 132, 117)";
+                btn.style.color = "#5b3a1e";
+            });
+        });
+
+        // DYNAMIC TITLE: changes the message's title depending on whether the current client
+        // is the sender (📤 icon) or the recipient (📥 icon). The wording always stays
+        // "message" (never "réponse"/"reply"), whether it's an initial message or a reply.
         const headerEl = html.querySelector(".fantasy-whisper-header");
         if (headerEl) {
-            if (message.user.id === game.user.id) {
-                // Si l'utilisateur connecté est l'auteur du chuchotement
+            if (message.author.id === game.user.id) {
+                // The logged-in user is the whisper's author
                 headerEl.innerHTML = "📤 Envoi message privé";
             } else {
-                // Si l'utilisateur connecté est le destinataire du chuchotement
+                // The logged-in user is the whisper's recipient
                 headerEl.innerHTML = "📥 Réception message privé";
             }
         }
 
-        // DESTINATAIRE DANS L'EN-TÊTE NATIF FOUNDRY (la ligne horodatée "... à: Destinataire" au-dessus
-        // de la carte) : Foundry l'affiche à partir du nom de compte des destinataires (message.whisper),
-        // ce qui donne par exemple "à: Gamemaster". On le remplace par le personnage assigné au Gamemaster
-        // (ex. "Meneur de jeu") quand celui-ci fait partie des destinataires du chuchotement.
-        // On ne touche qu'aux nœuds de texte situés HORS de notre carte (.swade-chat-message), pour ne
-        // jamais modifier par erreur le corps du message si un joueur y a tapé le mot "Gamemaster".
+        // RECIPIENT NAME IN FOUNDRY'S NATIVE HEADER (the timestamped "... to: Recipient" line
+        // above the card): Foundry derives this from the recipients' account names
+        // (message.whisper), which shows e.g. "to: Gamemaster". We replace it with the GM's
+        // assigned character name (e.g. "Meneur de jeu") whenever the GM is one of the
+        // whisper's recipients.
+        // Only text nodes OUTSIDE our own card (.swade-chat-message) are touched, so we never
+        // accidentally rewrite the message body itself if a player happened to type the word
+        // "Gamemaster" in it.
         if (message.whisper?.length) {
             const cardEl = html.querySelector(".swade-chat-message");
             message.whisper.forEach(recipientId => {
                 const recipient = game.users.get(recipientId);
-                if (!recipient?.isGM) return; // seul le destinataire Gamemaster est concerné
+                if (!recipient?.isGM) return; // only the Gamemaster recipient is affected
                 const gmDisplayName = recipient.character?.name || recipient.name;
-                if (gmDisplayName === recipient.name) return; // pas de personnage assigné : rien à corriger
+                if (gmDisplayName === recipient.name) return; // no character assigned: nothing to fix
 
                 const walker = document.createTreeWalker(html, NodeFilter.SHOW_TEXT);
                 const textNodes = [];
@@ -63,14 +83,16 @@ if (!game._whisperReplyHooked) {
             });
         }
 
-        // Helper pour ouvrir une saisie et envoyer un whisper
-        const replyFlow = async (targetIds) => {
+        // Helper that opens an input dialog and sends a whisper reply. "targetLabel" (e.g.
+        // "à Amandine" or "au Meneur de jeu") is already built by the caller and embedded in
+        // the dialog's title.
+        const replyFlow = async (targetIds, targetLabel) => {
             const dlg = new foundry.applications.api.DialogV2({
-                window: { title: "Répondre en privé" },
+                window: { title: `Répondre en privé ${targetLabel}` },
                 content: `
           <div class="form-group" style="width:600px;">
             <label for="reply-text">Message :</label>
-            <textarea id="reply-text" rows="4" class="w-full"></textarea>
+            <textarea id="reply-text" rows="4" class="w-full" style="font-size:1.1rem;"></textarea>
           </div>
       `,
                 buttons: [{
@@ -81,124 +103,106 @@ if (!game._whisperReplyHooked) {
                         const text = button.form.querySelector("#reply-text")?.value.trim();
                         if (!text) return true;
 
-                        // Récupération dynamique de l'avatar du joueur actuel qui répond
+                        // Dynamically fetch the replying user's own avatar
                         const avatar = game.user.character?.img || game.user.avatar || "icons/svg/mystery-man.svg";
 
-                        // STYLE PARCHEMIN (aligné sur la charte graphique de trait-roll.js) : parchemin
-                        // beige/or, bordure #8b5e3c, police Garamond/Palatino & bouton laiton or.
+                        // PARCHMENT STYLE (matching trait-roll.js's visual style): beige/gold
+                        // parchment background, #8b5e3c border, Garamond/Palatino font &
+                        // gold-brass button. Layout mirrors the dice-roll result cards
+                        // (trait-roll.js/custom-roll.js): an avatar+title header row, a simple
+                        // divider, then the full-width message body.
                         const content = `
           <div class="swade-chat-message fantasy-whisper-card" style="
             display: flex;
-            align-items: flex-start;
-            background: linear-gradient(145deg, #f6ecd7, #e6d8b3); /* Même dégradé parchemin que trait-roll.js */
-            border: 2px solid #8b5e3c; /* Même bordure marron que trait-roll.js */
-            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3); /* Même ombre portée que trait-roll.js */
+            flex-direction: column;
+            gap: 8px;
+            background: linear-gradient(145deg, #f6ecd7, #e6d8b3); /* Same parchment gradient as trait-roll.js */
+            border: 2px solid #8b5e3c; /* Same brown border as trait-roll.js */
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3); /* Same drop shadow as trait-roll.js */
             border-radius: 12px;
             padding: 12px;
             font-family: 'Garamond', 'Palatino Linotype', serif;
             color: #3b2f20;
-            position: relative;
           ">
-            <style>
-              /* Animations de survol (hover) locales pour le bouton Répondre */
-              .fantasy-whisper-reply-btn:hover {
-                background: linear-gradient(to bottom, #e5c158, #c6941e) !important;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
-                transform: translateY(-0.5px);
-              }
-              .fantasy-whisper-reply-btn:active {
-                transform: translateY(0.5px);
-                box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
-              }
-            </style>
+            <!-- The "Répondre" (Reply) button's fill-on-hover effect is handled in JS by the
+                 renderChatMessageHTML hook earlier in this file: a <style> tag here would not
+                 be applied. -->
 
-            <!-- Image de l'avatar de réponse (verrouillée inline à 64px, alignée sur trait-roll.js, pour bypasser les styles Foundry) -->
-            <img class="fantasy-whisper-avatar" src="${foundry.utils.escapeHTML(avatar)}" alt="Avatar de ${foundry.utils.escapeHTML(game.user.name)}" style="
-              width: 64px;
-              height: 64px;
-              min-width: 64px;
-              max-width: 64px;
-              border-radius: 6px;
-              border: 2px solid #8b5e3c;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-              object-fit: cover;
-              margin-right: 10px;
-              display: block;
-            ">
-            <div class="fantasy-whisper-content" style="flex: 1; min-width: 0;">
-              <!-- En-tête de la réponse privée -->
+            <!-- Header: avatar + title, mirroring trait-roll.js's avatar+dice row -->
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <img class="fantasy-whisper-avatar" src="${foundry.utils.escapeHTML(avatar)}" alt="Avatar de ${foundry.utils.escapeHTML(game.user.name)}" style="
+                width: 64px;
+                height: 64px;
+                min-width: 64px;
+                max-width: 64px;
+                border-radius: 6px;
+                border: 2px solid #8b5e3c;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+                object-fit: cover;
+                display: block;
+              ">
               <div class="fantasy-whisper-header" style="
                 font-family: 'Garamond', 'Palatino Linotype', serif;
                 font-weight: bold;
                 font-size: 0.9rem;
-                color: #5b3a1e; /* Même couleur accent que le résultat final dans trait-roll.js */
+                color: #5b3a1e; /* Same accent color as the final total in trait-roll.js */
                 letter-spacing: 0.5px;
                 text-transform: uppercase;
               ">
                 📩 Réponse privée
               </div>
+            </div>
 
-              <!-- Séparateur ornemental (ligne dégradée avec diamant central) -->
-              <div class="fantasy-whisper-divider" style="
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin: 4px 0 6px 0;
-              ">
-                <div style="flex: 1; height: 1px; background: linear-gradient(to right, rgba(139, 94, 60, 0), rgba(139, 94, 60, 0.4), rgba(139, 94, 60, 0));"></div>
-                <div style="width: 5px; height: 5px; transform: rotate(45deg); background-color: #8b5e3c; margin: 0 6px;"></div>
-                <div style="flex: 1; height: 1px; background: linear-gradient(to right, rgba(139, 94, 60, 0), rgba(139, 94, 60, 0.4), rgba(139, 94, 60, 0));"></div>
-              </div>
+            <!-- Simple divider -->
+            <div style="height: 1px; background: rgba(139, 94, 60, 0.4);"></div>
 
-              <!-- Corps de la réponse -->
-              <div class="fantasy-whisper-body" style="
-                font-family: 'Garamond', 'Palatino Linotype', serif;
-                font-size: 0.95rem;
-                line-height: 1.35;
-                color: #3b2f20;
-                word-break: break-word;
-              ">
-                ${foundry.utils.escapeHTML(text)}
-              </div>
+            <!-- Reply body (more legible sans-serif font, tightened line height) -->
+            <div class="fantasy-whisper-body" style="
+              font-family: 'Segoe UI', Verdana, Arial, sans-serif;
+              font-size: 1.2rem;
+              line-height: 1.2;
+              color: #3b2f20;
+              word-break: break-word;
+            ">
+              ${foundry.utils.escapeHTML(text)}
+            </div>
 
-              <!-- Bouton d'action "Répondre" (laiton or brossé 3D) -->
-              <div class="whisper-actions" style="text-align: left;">
-                <button type="button"
-                        class="whisper-reply fantasy-whisper-reply-btn"
-                        data-reply-to="${game.user.id}"
-                        style="
-                          background: linear-gradient(to bottom, #d4af37, #aa7c11);
-                          border: 1px solid #8b5e3c;
-                          border-radius: 4px;
-                          color: #ffffff !important;
-                          font-family: 'Garamond', 'Palatino Linotype', serif;
-                          font-size: 0.75rem;
-                          font-weight: bold;
-                          text-transform: uppercase;
-                          padding: 3px 8px;
-                          cursor: pointer;
-                          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-                          text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
-                          transition: all 0.15s ease;
-                          display: inline-block;
-                          margin-top: 6px;
-                        ">
-                  Répondre
-                </button>
-              </div>
+            <!-- "Répondre" (Reply) action button (flat style, matching Foundry's native look) -->
+            <div class="whisper-actions" style="text-align: center;">
+              <button type="button"
+                      class="whisper-reply fantasy-whisper-reply-btn"
+                      data-reply-to="${game.user.id}"
+                      style="
+                        background: transparent;
+                        border: 1px solid rgb(159, 132, 117);
+                        border-radius: 4px;
+                        color: #5b3a1e;
+                        font-family: 'Segoe UI', Verdana, Arial, sans-serif;
+                        font-size: 0.85rem;
+                        font-weight: bold;
+                        padding: 4px 10px;
+                        cursor: pointer;
+                        transition: border-color 0.15s ease, background-color 0.15s ease;
+                        display: inline-block;
+                        margin-top: 6px;
+                      ">
+                Répondre
+              </button>
             </div>
           </div>
         `;
 
-                        // ALIAS DE L'EN-TÊTE NATIF FOUNDRY (voir même logique dans private-message.js) :
-                        // Gamemaster => son personnage assigné, joueur => toujours son nom de compte.
+                        // FOUNDRY'S NATIVE HEADER ALIAS (same logic as private-message.js):
+                        // Gamemaster => their assigned character, player => always their account name.
                         const senderAlias = game.user.isGM ? (game.user.character?.name || game.user.name) : game.user.name;
 
-                        // Création du whisper de réponse avec flag whisperReply pour mémoriser l'auteur
+                        // Create the reply whisper, storing the whisperReply flag so the chain
+                        // remembers who to reply to next. The "WHISPER" style is now inferred
+                        // automatically from the presence of the "whisper" array alone: setting
+                        // it explicitly has been deprecated since Foundry v12.
                         ChatMessage.create({
                             content: content,
                             speaker: { alias: senderAlias },
-                            type: CONST.CHAT_MESSAGE_TYPES.WHISPER,
                             whisper: targetIds,
                             flags: { world: { whisperReply: { replyTo: game.user.id } } }
                         });
@@ -209,14 +213,20 @@ if (!game._whisperReplyHooked) {
             dlg.render({ force: true });
         };
 
-        // Bouton "Répondre" (à l’auteur)
+        // "Répondre" (Reply) button — replies to the original author
         html.querySelectorAll(".whisper-reply")?.forEach(btn => {
             btn.addEventListener("click", async () => {
                 const replyToFlag = message.getFlag("world", "whisperReply");
-                const authorId = replyToFlag?.replyTo ?? message.user.id;
+                const authorId = replyToFlag?.replyTo ?? message.author.id;
                 const target = game.users.get(authorId);
                 if (!target) return ui.notifications.warn("Auteur introuvable.");
-                await replyFlow([authorId]);
+                // The Gamemaster is always referred to by their assigned character (e.g.
+                // "Meneur de jeu"), never by their account name — same convention as the
+                // rest of this file.
+                const targetLabel = target.isGM
+                    ? `au ${target.character?.name || target.name}`
+                    : `à ${target.name}`;
+                await replyFlow([authorId], targetLabel);
             });
         });
 
@@ -224,6 +234,9 @@ if (!game._whisperReplyHooked) {
 
 }
 
+// Registers one Dice So Nice colorset per die size (plus the SWADE wild/joker die), so that
+// the [basic-dN] / [basic-wild-die] flavor tags used in the roll formulas (trait-roll-*.js,
+// custom-roll.js) resolve to a distinct look for each die.
 Hooks.once('diceSoNiceReady', (dice3d) => {
 
     console.log('Test | Dice So Nice is loaded');
