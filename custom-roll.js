@@ -12,7 +12,10 @@
    explanatory hint above the dice) while 2+ dice are selected, and while it is active,
    selecting a die replaces the previously selected one (also explained by a hint).
 
-   The result is posted to chat using the same visual style as trait-roll.js. */
+   The result is posted to chat using the same visual style as trait-roll.js. A Joker rolled
+   with a single other die is a SWADE trait roll: it is posted like a trait-roll-*.js roll (card
+   drawn by start-session.js, with its modifier / difficulty buttons). Other rolls keep the
+   simple card built here. */
 
 (async () => {
   const DICE_SIZES = [4, 6, 8, 10, 12];
@@ -20,7 +23,7 @@
   // Foundry's HTML sanitizer strips inline <svg> elements from both DialogV2 content and
   // chat message content, so every icon is always converted to a base64 data URI wrapped
   // in a plain <img> tag instead — used here for both the palette and the result message
-  // (see trait-roll-d4.js for the same technique).
+  // (see start-session.js for the same technique).
   const svgToDataUri = (svg) => `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
 
   // Icons embedded directly in the code (see icons/*.svg in the project): a macro script
@@ -227,6 +230,28 @@
       jokerDieTerm = roll.dice[0];
     } else {
       mainDiceTerms = roll.dice;
+    }
+
+    // A Joker rolled with a single other die is a SWADE trait roll: it gets the same interactive
+    // card as the trait-roll-*.js macros (modifier and difficulty buttons), drawn by
+    // start-session.js from the data stored in the message flags (see its "TRAIT ROLL CARD"
+    // block). Any other roll (no Joker, or the Joker alone) keeps the simple card built below.
+    if (jokerEnabled && mainDiceTerms.length === 1) {
+      const dieData = (type, die) => ({ type, faces: die.faces, results: die.results.map(result => result.result) });
+      ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ user }),
+        content: `<p>Jet de trait (d${mainDiceTerms[0].faces}) : ${roll.total}</p>`,
+        flags: {
+          world: {
+            traitRoll: {
+              dice: [dieData("trait", mainDiceTerms[0]), dieData("wild", jokerDieTerm)],
+              modifier: 0,
+              difficulty: 4
+            }
+          }
+        }
+      });
+      return true;
     }
 
     const diceRowHtml = (iconSvg, label, die) => `

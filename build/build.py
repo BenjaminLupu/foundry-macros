@@ -15,6 +15,7 @@ templates for anything that is not a macro (installer logic, header comments),
 never the generated files.
 """
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -103,6 +104,34 @@ def render(template_name):
     return text
 
 
+# Sources that embed a copy of the die icons (a Foundry macro cannot read icons/*.svg).
+# They must stay identical to icons/*.svg: this is checked on every run, so a swapped or
+# outdated icon is reported instead of silently shipped.
+ICON_SOURCES = ["custom-roll.js", "start-session.js"]
+DIE_ICON_FILES = {"4": "d4", "6": "d6", "8": "d8", "10": "d10", "12": "d12"}
+
+
+def svg_body(name):
+    """An icon as embedded in the macros: from the <svg> tag on, without the trailing newline."""
+    text = read_text(ROOT / "icons" / f"{name}.svg")
+    return text[text.index("<svg"):].rstrip("\n")
+
+
+def icon_problems():
+    problems = []
+    for source in ICON_SOURCES:
+        text = read_text(ROOT / source)
+        embedded = {m.group(1): m.group(2)
+                    for m in re.finditer(r"^\s+(\d+): `(<svg.*?</svg>)`,?$", text, re.M | re.S)}
+        for faces, name in DIE_ICON_FILES.items():
+            if embedded.get(faces) != svg_body(name):
+                problems.append(f"{source}: l'icône du d{faces} n'est pas celle de icons/{name}.svg")
+        wild = re.search(r"WILD_DIE_ICON_SVG = `(<svg.*?</svg>)`", text, re.S)
+        if not wild or wild.group(1) != svg_body("wild-die"):
+            problems.append(f"{source}: l'icône du dé sauvage n'est pas celle de icons/wild-die.svg")
+    return problems
+
+
 def main():
     check = "--check" in sys.argv[1:]
     stale = []
@@ -119,7 +148,12 @@ def main():
         else:
             target.write_text(expected, encoding="utf-8", newline="\n")
             print(f"{output}: régénéré")
-    return 1 if stale else 0
+    problems = icon_problems()
+    for problem in problems:
+        print(f"ICÔNE DÉSYNCHRONISÉE — {problem}")
+    if not problems:
+        print("icônes embarquées: identiques à icons/*.svg")
+    return 1 if (stale or problems) else 0
 
 
 if __name__ == "__main__":
