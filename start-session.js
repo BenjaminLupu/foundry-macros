@@ -362,8 +362,9 @@ if (!game._traitRollCardHooked) {
             </div>`;
 
     // The parchment card shared by every roll: the author's avatar and one line per die, the big
-    // total, then "belowTotalHtml" (calculation detail, result, adjust controls).
-    const cardHtml = (author, diceRows, totalDisplay, belowTotalHtml) => `
+    // total (in "totalColor": green on a success, red on a failure, brown by default), then
+    // "belowTotalHtml" (calculation detail, result, adjust controls).
+    const cardHtml = (author, diceRows, totalDisplay, totalColor, belowTotalHtml) => `
             <div class="swade-chat-message trait-roll-card" style="
                 display:flex;
                 flex-direction:column;
@@ -389,7 +390,7 @@ if (!game._traitRollCardHooked) {
                     text-align:center;
                     font-size:3rem;
                     font-weight:bold;
-                    color:#5b3a1e;
+                    color:${totalColor ?? "#5b3a1e"};
                     text-shadow:1px 1px 2px rgba(0,0,0,0.3);
                     border-top:1px solid #8b5e3c;
                     padding-top:6px;
@@ -414,6 +415,10 @@ if (!game._traitRollCardHooked) {
         const criticalFailure = data.dice.every(die => die.results[0] === 1);
         const totalDisplay = criticalFailure ? "💀" : formatNumber(total);
 
+        // The total is green on a success and red on a failure (the skull keeps its own look)
+        const success = total >= difficulty;
+        const totalColor = criticalFailure ? undefined : (success ? COLOR_POSITIVE : COLOR_NEGATIVE);
+
         const diceRows = data.dice.map(die =>
             dieRowHtml(die, die.type === "wild" ? "Dé sauvage" : `Dé de trait (d${die.faces})`, formatDieLine(die, modifier))
         ).join("");
@@ -423,7 +428,6 @@ if (!game._traitRollCardHooked) {
         // result on a critical failure.
         const lines = [];
         if (!criticalFailure) {
-            const success = total >= difficulty;
             const raises = success ? Math.floor((total - difficulty) / 4) : 0;
             lines.push(`<div style="font-size:1.3rem;font-weight:bold;">${success ? "Réussite" : "Échec"}</div>`);
             if (raises >= 1) {
@@ -433,7 +437,7 @@ if (!game._traitRollCardHooked) {
         lines.push(`<div style="font-size:0.85rem;opacity:0.7;">Difficulté ${difficulty}, modificateur ${formatModifier(modifier)}</div>`);
         const resultHtml = `<div class="trait-roll-result" style="text-align:center;">${lines.join("")}</div>`;
 
-        return cardHtml(message.author, diceRows, totalDisplay, resultHtml + (canAdjust ? adjustZoneHtml(modifier, difficulty) : ""));
+        return cardHtml(message.author, diceRows, totalDisplay, totalColor, resultHtml + (canAdjust ? adjustZoneHtml(modifier, difficulty) : ""));
     };
 
     // Free roll card (flags.world.freeRoll): any palette roll that is not a trait roll. Every die
@@ -456,9 +460,12 @@ if (!game._traitRollCardHooked) {
         const calculationHtml = modifier === 0 ? "" : `
                 <div class="trait-roll-calculation" style="text-align:center;font-size:1.1rem;">${diceTotal} <span style="color:${modifierColor(modifier)};font-weight:bold;">${modifier > 0 ? "+" : MINUS} ${Math.abs(modifier)}</span></div>`;
 
-        // Result: only with a difficulty (0 = no difficulty, nothing is shown)
+        // Result: only with a difficulty (0 = no difficulty, nothing is shown). The total is then
+        // green on a success and red on a failure.
         let resultHtml = "";
+        let totalColor;
         if (difficulty >= 1) {
+            totalColor = total >= difficulty ? COLOR_POSITIVE : COLOR_NEGATIVE;
             resultHtml = `
                 <div class="trait-roll-result" style="text-align:center;">
                     <div style="font-size:1.3rem;font-weight:bold;">${total >= difficulty ? "Réussite" : "Échec"}</div>
@@ -466,7 +473,7 @@ if (!game._traitRollCardHooked) {
                 </div>`;
         }
 
-        return cardHtml(message.author, diceRows, formatNumber(total), calculationHtml + resultHtml + (canAdjust ? adjustZoneHtml(modifier, difficulty) : ""));
+        return cardHtml(message.author, diceRows, formatNumber(total), totalColor, calculationHtml + resultHtml + (canAdjust ? adjustZoneHtml(modifier, difficulty) : ""));
     };
 
     // The two kinds of card: the message flag holding the roll, how to draw it, and the default
