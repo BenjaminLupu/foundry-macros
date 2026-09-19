@@ -60,10 +60,15 @@
   // Formats one die's result(s) as plain text, appending 💥 to any exploded ("Ace")
   // result — in SWADE, a die that rolls its maximum face explodes: it is rerolled and
   // the new result is added to the total, repeating as long as it keeps rolling max.
-  const formatDie = (die) =>
-    die.results
+  // When the die did explode, the line ends with "= sum" (the sum of everything it rolled,
+  // e.g. "8💥 + 3 = 11"); a die that did not explode is shown as a plain result.
+  const formatDie = (die) => {
+    const text = die.results
       .map(r => r.exploded ? `${r.result}💥` : r.result)
       .join(" + ");
+    if (!die.results.some(r => r.exploded)) return text;
+    return `${text} = ${die.results.reduce((sum, r) => sum + r.result, 0)}`;
+  };
 
 
   const standardDie = dice[0]; // First term in the formula: the trait die

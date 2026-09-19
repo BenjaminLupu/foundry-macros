@@ -112,7 +112,11 @@
   // Builds the formula, rolls the selected dice, and posts the result to chat.
   // Returns false to prevent the palette from closing if nothing was selected.
   async function rollSelectedDice() {
-    const parts = DICE_SIZES.filter(faces => counts[faces] > 0).map(faces => `${counts[faces]}d${faces}x[basic-d${faces}]`);
+    // One term per die ("1d6x + 1d6x" rather than "2d6x"), so every die gets its own line in
+    // the result and its own explosion chain (Foundry appends the explosion results of an
+    // "NdX" term after all N dice, which would make it impossible to tell which die
+    // exploded). The odds are the same as a single "NdX" term.
+    const parts = DICE_SIZES.flatMap(faces => Array.from({ length: counts[faces] }, () => `1d${faces}x[basic-d${faces}]`));
     const combined = parts.join(" + ");
 
     if (!combined && !jokerEnabled) {
@@ -134,10 +138,15 @@
       await game.dice3d.showForRoll(roll, user, true, null, false);
     }
 
-    const formatDie = (die) =>
-      die.results.map(r => r.exploded ? `${r.result}💥` : r.result).join(" + ");
+    // When the die did explode, the line ends with "= sum" (the sum of everything it rolled,
+    // e.g. "8💥 + 3 = 11"); a die that did not explode is shown as a plain result.
+    const formatDie = (die) => {
+      const text = die.results.map(r => r.exploded ? `${r.result}💥` : r.result).join(" + ");
+      if (!die.results.some(r => r.exploded)) return text;
+      return `${text} = ${die.results.reduce((sum, r) => sum + r.result, 0)}`;
+    };
 
-    // Splits out the "regular" dice (each displayed by size) from the optional Joker die,
+    // Splits out the "regular" dice (one line per die) from the optional Joker die,
     // depending on whether the formula used a pool ({...}kh) or not (see the formula
     // comment above).
     let mainDiceTerms = [];
