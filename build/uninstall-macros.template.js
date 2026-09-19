@@ -2,9 +2,9 @@
    table in build/build.py), then run: python build/build.py
 
    Macro: cleans up everything install-macros.js installs.
-   - Removes hotbar slots 1-7 from EVERY user in the world (whether currently
+   - Removes hotbar slots __SLOT_RANGE__ from EVERY user in the world (whether currently
      connected or not), without touching the rest of their personal hotbar
-   - Deletes the 8 macros installed by install-macros.js: the 5 trait-roll-*
+   - Deletes the __MACRO_COUNT__ macros installed by install-macros.js: the 5 trait-roll-*
      macros, custom-roll, private-message, and start-session (start-session has
      no hotbar slot to remove — only its Macro document gets deleted)
    - Also does a final one-time cleanup of the old simple-roll-* macros
@@ -27,12 +27,11 @@
 // Technical identifiers of the macros currently installed by install-macros.js
 // (generated from the MACROS table in build/build.py, same source as install-macros.js)
 const INSTALLED_MACRO_KEYS = [
-  "macro-1d4-joker", "macro-1d6-joker", "macro-1d8-joker", "macro-1d10-joker", "macro-1d12-joker",
-  "custom-roll", "macro-private-message", "macro-session-start"
+__INSTALLED_MACRO_KEYS__
 ];
 
 // Hotbar slots used by install-macros.js (generated, same source)
-const INSTALLED_SLOTS = [1, 2, 3, 4, 5, 6, 7];
+const INSTALLED_SLOTS = [__INSTALLED_SLOTS__];
 
 // Old simple-roll-* macros (replaced by the custom-roll palette): install-macros.js
 // no longer installs these, but we clean them up here one last time if they're still around.
@@ -45,7 +44,7 @@ const LEGACY_SLOTS = [11, 12, 13, 14, 15];
     content: `
       <p>Cette action va, pour TOUS les joueurs du monde (connectés ou non) :</p>
       <ul>
-        <li>retirer les emplacements 1-7 (et les anciens 11-15 s'ils traînent encore) de leur barre de raccourcis (le reste de leur barre n'est pas touché) ;</li>
+        <li>retirer les emplacements __SLOT_RANGE__ (et les anciens 11-15 s'ils traînent encore) de leur barre de raccourcis (le reste de leur barre n'est pas touché) ;</li>
         <li>supprimer les macros installées par install-macros.js.</li>
       </ul>
       <p>Cette action est irréversible. Continuer ?</p>
