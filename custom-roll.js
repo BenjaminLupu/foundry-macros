@@ -173,6 +173,11 @@
       ...(jokerDieTerm ? [diceRowHtml(WILD_DIE_ICON_SVG, "Joker", jokerDieTerm)] : [])
     ].join("");
 
+    // Critical failure (same rule as trait-roll-*.js): the Joker was rolled and the total is 1,
+    // meaning the Joker and the only other die both show 1. Displayed as a skull instead of
+    // the number. Without the Joker, a total of 1 is a plain result.
+    const totalDisplay = jokerEnabled && roll.total === 1 ? "💀" : roll.total;
+
     ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ user }),
       content: `
@@ -209,7 +214,7 @@
                     border-top:1px solid #8b5e3c;
                     padding-top:6px;
                 ">
-                    ${roll.total}
+                    ${totalDisplay}
                 </div>
 
             </div>
