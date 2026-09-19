@@ -235,20 +235,25 @@ if (!game._whisperReplyHooked) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// TRAIT ROLL CARD (posted by trait-roll-*.js, and by custom-roll.js for a Joker + 1 die roll)
+// ROLL CARDS (posted by trait-roll-*.js and custom-roll.js)
 //
 // Those macros do not build the chat card themselves: they store what was rolled in the message
-// flags (flags.world.traitRoll) and post a plain text fallback as the message content. The card
+// flags (flags.world.traitRoll or .freeRoll) and post a plain text fallback as the content. The card
 // is drawn here, every time the message is rendered, on every client, from those flags. This is
 // what makes the card adjustable after the roll: the "-" / "+" buttons update the flags, Foundry
 // re-renders the message everywhere, and the card is redrawn with the new modifier/difficulty.
 // (Scripts and click handlers written in a message's own HTML are stripped by Foundry, hence
 // the buttons are wired up here.)
 //
-// flags.world.traitRoll:
+// flags.world.traitRoll: a SWADE trait roll (trait die + wild die, the higher is kept)
 //   dice       : [{ type: "trait" | "wild", faces, results: [first roll, explosion, ...] }, ...]
 //   modifier   : -6 .. +6, added to every die line and to the total (default 0)
-//   difficulty : target number, 0 or more (default 4)
+//   difficulty : target number, 0 or more (default 4); raises for every 4 points above it
+//
+// flags.world.freeRoll: any other palette roll (all the dice are added up, no raises)
+//   dice       : [{ type: "die" | "wild", faces, results: [...] }, ...]
+//   modifier   : -6 .. +6, added once to the sum of the dice (default 0)
+//   difficulty : target number, 0 or more (default 0 = no difficulty: no result is shown)
 // ---------------------------------------------------------------------------------------------
 if (!game._traitRollCardHooked) {
 
@@ -275,7 +280,8 @@ if (!game._traitRollCardHooked) {
     const MODIFIER_MAX = 6;
     const DIFFICULTY_MIN = 0;
     const DEFAULT_MODIFIER = 0;
-    const DEFAULT_DIFFICULTY = 4;
+    const DEFAULT_TRAIT_DIFFICULTY = 4;
+    const DEFAULT_FREE_DIFFICULTY = 0;
     const COLOR_POSITIVE = "#2e7d32";
     const COLOR_NEGATIVE = "#c62828";
     const MINUS = "−"; // real minus sign, as wide as the "+"
@@ -341,53 +347,23 @@ if (!game._traitRollCardHooked) {
             </span>
         </div>`;
 
-    // Draws the whole card from the flags. "canAdjust" (author of the roll, or GM) decides
-    // whether the modifier/difficulty controls are shown.
-    const buildTraitRollCard = (message, data, canAdjust) => {
-        const modifier = data.modifier ?? DEFAULT_MODIFIER;
-        const difficulty = data.difficulty ?? DEFAULT_DIFFICULTY;
-        const author = message.author;
-
-        // The roll keeps the higher of the two dice (SWADE); the modifier applies to the result.
-        const total = Math.max(...data.dice.map(die => sum(die.results) + modifier));
-
-        // Critical failure: the trait die and the wild die both show 1 on their first roll. It
-        // depends on the dice only, whatever the modifier: the skull replaces the total.
-        const criticalFailure = data.dice.every(die => die.results[0] === 1);
-        const totalDisplay = criticalFailure ? "💀" : formatNumber(total);
-
-        const diceRows = data.dice.map(die => {
-            const isWild = die.type === "wild";
-            const label = isWild ? "Dé sauvage" : `Dé de trait (d${die.faces})`;
-            return `
+    // One line of the dice list: the die icon, then its text (the label is only the alt text).
+    const dieRowHtml = (die, label, lineText) => `
                 <div style="display:flex;align-items:center;gap:6px;">
-                    <img src="${svgToDataUri(isWild ? WILD_DIE_ICON_SVG : DIE_ICON_SVG[die.faces])}" alt="${label}" style="width:24px;height:24px;" />
-                    <span>${formatDieLine(die, modifier)}</span>
+                    <img src="${svgToDataUri(die.type === "wild" ? WILD_DIE_ICON_SVG : DIE_ICON_SVG[die.faces])}" alt="${label}" style="width:24px;height:24px;" />
+                    <span>${lineText}</span>
                 </div>`;
-        }).join("");
 
-        // Result, shown from the start (difficulty 4, modifier 0 by default): Échec / Réussite
-        // against the difficulty, and one raise per full 4 points above it. Nothing about the
-        // result on a critical failure.
-        const lines = [];
-        if (!criticalFailure) {
-            const success = total >= difficulty;
-            const raises = success ? Math.floor((total - difficulty) / 4) : 0;
-            lines.push(`<div style="font-size:1.3rem;font-weight:bold;">${success ? "Réussite" : "Échec"}</div>`);
-            if (raises >= 1) {
-                lines.push(`<div style="font-size:1.15rem;">Et c'est ${raises} ${raises > 1 ? "prouesses" : "prouesse"} ! 🎉</div>`);
-            }
-        }
-        lines.push(`<div style="font-size:0.85rem;opacity:0.7;">Difficulté ${difficulty}, modificateur ${formatModifier(modifier)}</div>`);
-        const resultHtml = `<div class="trait-roll-result" style="text-align:center;">${lines.join("")}</div>`;
-
-        const adjustHtml = canAdjust ? `
+    // The modifier / difficulty controls, shown to the author of the roll and to the GM only.
+    const adjustZoneHtml = (modifier, difficulty) => `
             <div class="trait-roll-adjust" style="border-top:1px solid rgba(139,94,60,0.4);padding-top:8px;display:flex;flex-direction:column;gap:6px;">
                 ${stepperRow("Modificateur", "modifier", formatModifier(modifier), modifierColor(modifier), modifier > MODIFIER_MIN, modifier < MODIFIER_MAX)}
                 ${stepperRow("Difficulté", "difficulty", String(difficulty), "inherit", difficulty > DIFFICULTY_MIN, true)}
-            </div>` : "";
+            </div>`;
 
-        return `
+    // The parchment card shared by every roll: the author's avatar and one line per die, the big
+    // total, then "belowTotalHtml" (calculation detail, result, adjust controls).
+    const cardHtml = (author, diceRows, totalDisplay, belowTotalHtml) => `
             <div class="swade-chat-message trait-roll-card" style="
                 display:flex;
                 flex-direction:column;
@@ -421,21 +397,95 @@ if (!game._traitRollCardHooked) {
                     ${totalDisplay}
                 </div>
 
-                ${resultHtml}
-                ${adjustHtml}
+                ${belowTotalHtml}
             </div>`;
+
+    // SWADE trait roll card (flags.world.traitRoll), drawn from the flags. "canAdjust" (author of
+    // the roll, or GM) decides whether the modifier/difficulty controls are shown.
+    const buildTraitRollCard = (message, data, canAdjust) => {
+        const modifier = data.modifier ?? DEFAULT_MODIFIER;
+        const difficulty = data.difficulty ?? DEFAULT_TRAIT_DIFFICULTY;
+
+        // The roll keeps the higher of the two dice (SWADE); the modifier applies to the result.
+        const total = Math.max(...data.dice.map(die => sum(die.results) + modifier));
+
+        // Critical failure: the trait die and the wild die both show 1 on their first roll. It
+        // depends on the dice only, whatever the modifier: the skull replaces the total.
+        const criticalFailure = data.dice.every(die => die.results[0] === 1);
+        const totalDisplay = criticalFailure ? "💀" : formatNumber(total);
+
+        const diceRows = data.dice.map(die =>
+            dieRowHtml(die, die.type === "wild" ? "Dé sauvage" : `Dé de trait (d${die.faces})`, formatDieLine(die, modifier))
+        ).join("");
+
+        // Result, shown from the start (difficulty 4, modifier 0 by default): Échec / Réussite
+        // against the difficulty, and one raise per full 4 points above it. Nothing about the
+        // result on a critical failure.
+        const lines = [];
+        if (!criticalFailure) {
+            const success = total >= difficulty;
+            const raises = success ? Math.floor((total - difficulty) / 4) : 0;
+            lines.push(`<div style="font-size:1.3rem;font-weight:bold;">${success ? "Réussite" : "Échec"}</div>`);
+            if (raises >= 1) {
+                lines.push(`<div style="font-size:1.15rem;">Et c'est ${raises} ${raises > 1 ? "prouesses" : "prouesse"} ! 🎉</div>`);
+            }
+        }
+        lines.push(`<div style="font-size:0.85rem;opacity:0.7;">Difficulté ${difficulty}, modificateur ${formatModifier(modifier)}</div>`);
+        const resultHtml = `<div class="trait-roll-result" style="text-align:center;">${lines.join("")}</div>`;
+
+        return cardHtml(message.author, diceRows, totalDisplay, resultHtml + (canAdjust ? adjustZoneHtml(modifier, difficulty) : ""));
+    };
+
+    // Free roll card (flags.world.freeRoll): any palette roll that is not a trait roll. Every die
+    // is added up (nothing is compared with a wild die), the modifier is added once to the sum, and
+    // there are no raises.
+    const buildFreeRollCard = (message, data, canAdjust) => {
+        const modifier = data.modifier ?? DEFAULT_MODIFIER;
+        const difficulty = data.difficulty ?? DEFAULT_FREE_DIFFICULTY;
+
+        const diceTotal = sum(data.dice.map(die => sum(die.results)));
+        const total = diceTotal + modifier;
+
+        // One line per die, without the modifier (it applies to the whole sum, not to each die)
+        const diceRows = data.dice.map(die =>
+            dieRowHtml(die, die.type === "wild" ? "Joker" : `d${die.faces}`, formatDieLine(die, 0))
+        ).join("");
+
+        // The calculation of the total, under it, when there is a modifier: "11 + 2" (the "+ 2"
+        // green when positive, "− 3" red when negative)
+        const calculationHtml = modifier === 0 ? "" : `
+                <div class="trait-roll-calculation" style="text-align:center;font-size:1.1rem;">${diceTotal} <span style="color:${modifierColor(modifier)};font-weight:bold;">${modifier > 0 ? "+" : MINUS} ${Math.abs(modifier)}</span></div>`;
+
+        // Result: only with a difficulty (0 = no difficulty, nothing is shown)
+        let resultHtml = "";
+        if (difficulty >= 1) {
+            resultHtml = `
+                <div class="trait-roll-result" style="text-align:center;">
+                    <div style="font-size:1.3rem;font-weight:bold;">${total >= difficulty ? "Réussite" : "Échec"}</div>
+                    <div style="font-size:0.85rem;opacity:0.7;">Difficulté ${difficulty}</div>
+                </div>`;
+        }
+
+        return cardHtml(message.author, diceRows, formatNumber(total), calculationHtml + resultHtml + (canAdjust ? adjustZoneHtml(modifier, difficulty) : ""));
+    };
+
+    // The two kinds of card: the message flag holding the roll, how to draw it, and the default
+    // difficulty (used when the flag has none).
+    const ROLL_CARDS = {
+        traitRoll: { build: buildTraitRollCard, defaultDifficulty: DEFAULT_TRAIT_DIFFICULTY },
+        freeRoll: { build: buildFreeRollCard, defaultDifficulty: DEFAULT_FREE_DIFFICULTY }
     };
 
     Hooks.on("renderChatMessageHTML", (message, html) => {
-        const data = message.getFlag("world", "traitRoll");
-        if (!data?.dice?.length) return; // not a trait roll card
+        const flagKey = Object.keys(ROLL_CARDS).find(key => message.getFlag("world", key)?.dice?.length);
+        if (!flagKey) return; // not a roll card
 
         const contentEl = html.querySelector(".message-content");
         if (!contentEl) return;
 
         // Only the author of the roll and the GM can adjust it.
         const canAdjust = game.user.isGM || message.author?.id === game.user.id;
-        contentEl.innerHTML = buildTraitRollCard(message, data, canAdjust);
+        contentEl.innerHTML = ROLL_CARDS[flagKey].build(message, message.getFlag("world", flagKey), canAdjust);
 
         html.querySelectorAll(".trait-roll-step").forEach(btn => {
 
@@ -455,10 +505,10 @@ if (!game._traitRollCardHooked) {
             // Each click is applied at once: the new value is stored in the flags, Foundry then
             // re-renders the message on every client and the card is redrawn by this hook.
             btn.addEventListener("click", async () => {
-                const current = message.getFlag("world", "traitRoll");
+                const current = message.getFlag("world", flagKey);
                 const delta = Number(btn.dataset.delta);
                 let modifier = current.modifier ?? DEFAULT_MODIFIER;
-                let difficulty = current.difficulty ?? DEFAULT_DIFFICULTY;
+                let difficulty = current.difficulty ?? ROLL_CARDS[flagKey].defaultDifficulty;
                 if (btn.dataset.field === "modifier") {
                     modifier = Math.min(MODIFIER_MAX, Math.max(MODIFIER_MIN, modifier + delta));
                 } else {
@@ -466,17 +516,16 @@ if (!game._traitRollCardHooked) {
                 }
                 try {
                     await message.update({
-                        "flags.world.traitRoll.modifier": modifier,
-                        "flags.world.traitRoll.difficulty": difficulty
+                        [`flags.world.${flagKey}.modifier`]: modifier,
+                        [`flags.world.${flagKey}.difficulty`]: difficulty
                     });
                 } catch (error) {
-                    console.error("Custom | Could not adjust the trait roll card", error);
+                    console.error("Custom | Could not adjust the roll card", error);
                     ui.notifications.warn("Impossible de modifier cette carte.");
                 }
             });
         });
     });
-
 }
 
 // Registers one Dice So Nice colorset per die size (plus the SWADE wild/joker die), so that

@@ -20,7 +20,7 @@
 - Die Color Themes are used with the flavor feature (eg. 1d4x[name-of-colorset])
 - The chat card is NOT built here: this macro stores what was rolled in the message flags
   (flags.world.traitRoll) and start-session.js draws the card from them, on every client (see
-  the "TRAIT ROLL CARD" block of start-session.js). That is what lets the roll be adjusted
+  the "ROLL CARDS" block of start-session.js). That is what lets the roll be adjusted
   afterwards (modifier / difficulty buttons on the card), and it also holds the die icons.
 - Dice So Nice documentation : https://gitlab.com/riccisi/foundryvtt-dice-so-nice/-/wikis/home
 - Foundry Die Formulas documentation : https://foundryvtt.com/article/dice/

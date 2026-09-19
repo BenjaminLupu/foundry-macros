@@ -12,10 +12,10 @@
    explanatory hint above the dice) while 2+ dice are selected, and while it is active,
    selecting a die replaces the previously selected one (also explained by a hint).
 
-   The result is posted to chat using the same visual style as trait-roll.js. A Joker rolled
-   with a single other die is a SWADE trait roll: it is posted like a trait-roll-*.js roll (card
-   drawn by start-session.js, with its modifier / difficulty buttons). Other rolls keep the
-   simple card built here. */
+   The result is posted to chat as data and drawn by start-session.js (same parchment style as
+   the trait-roll-*.js cards, with modifier / difficulty buttons): a Joker rolled with a single
+   other die is a SWADE trait roll (same card as the trait-roll-*.js macros); any other roll is
+   a free roll (all the dice added up, difficulty 0 by default, no raises). */
 
 (async () => {
   const DICE_SIZES = [4, 6, 8, 10, 12];
@@ -209,14 +209,6 @@
       await game.dice3d.showForRoll(roll, user, true, null, false);
     }
 
-    // When the die did explode, the line ends with "= sum" (the sum of everything it rolled,
-    // e.g. "8💥 + 3 = 11"); a die that did not explode is shown as a plain result.
-    const formatDie = (die) => {
-      const text = die.results.map(r => r.exploded ? `${r.result}💥` : r.result).join(" + ");
-      if (!die.results.some(r => r.exploded)) return text;
-      return `${text} = ${die.results.reduce((sum, r) => sum + r.result, 0)}`;
-    };
-
     // Splits out the "regular" dice (one line per die) from the optional Joker die,
     // depending on whether the formula used a pool ({...}kh) or not (see the formula
     // comment above).
@@ -232,12 +224,13 @@
       mainDiceTerms = roll.dice;
     }
 
-    // A Joker rolled with a single other die is a SWADE trait roll: it gets the same interactive
-    // card as the trait-roll-*.js macros (modifier and difficulty buttons), drawn by
-    // start-session.js from the data stored in the message flags (see its "TRAIT ROLL CARD"
-    // block). Any other roll (no Joker, or the Joker alone) keeps the simple card built below.
+    // The roll is posted to the chat as data (message flags), not as HTML: start-session.js draws
+    // the card from it, with the modifier / difficulty buttons (see its "ROLL CARDS" block).
+    const dieData = (type, die) => ({ type, faces: die.faces, results: die.results.map(result => result.result) });
+
     if (jokerEnabled && mainDiceTerms.length === 1) {
-      const dieData = (type, die) => ({ type, faces: die.faces, results: die.results.map(result => result.result) });
+      // A Joker rolled with a single other die is a SWADE trait roll: same card as the
+      // trait-roll-*.js macros (difficulty 4 by default, the higher of the two dice is kept).
       ChatMessage.create({
         speaker: ChatMessage.getSpeaker({ user }),
         content: `<p>Jet de trait (d${mainDiceTerms[0].faces}) : ${roll.total}</p>`,
@@ -251,68 +244,26 @@
           }
         }
       });
-      return true;
+    } else {
+      // Any other roll (no Joker, or the Joker alone) is a free roll: all the dice are added up
+      // (nothing is compared with a wild die), difficulty 0 by default (none), no raises.
+      ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ user }),
+        content: `<p>Jet : ${roll.total}</p>`,
+        flags: {
+          world: {
+            freeRoll: {
+              dice: [
+                ...mainDiceTerms.map(die => dieData("die", die)),
+                ...(jokerDieTerm ? [dieData("wild", jokerDieTerm)] : [])
+              ],
+              modifier: 0,
+              difficulty: 0
+            }
+          }
+        }
+      });
     }
-
-    const diceRowHtml = (iconSvg, label, die) => `
-      <div style="display:flex;align-items:center;gap:6px;">
-        <img src="${svgToDataUri(iconSvg)}" alt="${label}" style="width:24px;height:24px;" />
-        <span>${formatDie(die)}</span>
-      </div>
-    `;
-
-    const rowsHtml = [
-      ...mainDiceTerms.map(die => diceRowHtml(DIE_ICON_SVG[die.faces], `d${die.faces}`, die)),
-      ...(jokerDieTerm ? [diceRowHtml(WILD_DIE_ICON_SVG, "Joker", jokerDieTerm)] : [])
-    ].join("");
-
-    // Critical failure (same rule as trait-roll-*.js): the Joker was rolled and the total is 1,
-    // meaning the Joker and the only other die both show 1. Displayed as a skull instead of
-    // the number. Without the Joker, a total of 1 is a plain result.
-    const totalDisplay = jokerEnabled && roll.total === 1 ? "💀" : roll.total;
-
-    ChatMessage.create({
-      speaker: ChatMessage.getSpeaker({ user }),
-      content: `
-            <div class="swade-chat-message trait-roll-card" style="
-                display:flex;
-                flex-direction:column;
-                gap:8px;
-                background:linear-gradient(145deg,#f6ecd7,#e6d8b3);
-                border:2px solid #8b5e3c;
-                border-radius:12px;
-                padding:12px;
-                box-shadow:2px 2px 6px rgba(0,0,0,0.3);
-                font-family: 'Garamond', 'Palatino Linotype', serif;
-                color:#3b2f20;
-            ">
-
-                <div class="trait-roll-dice" style="display:flex;align-items:center;gap:12px;">
-
-                    <img src="${foundry.utils.escapeHTML(user.avatar)}" alt="Avatar de ${foundry.utils.escapeHTML(user.name)}" style="width:64px;height:64px;border-radius:6px;border:1px solid #8b5e3c;object-fit:cover;" />
-
-                    <div style="display:flex;flex-direction:column;gap:4px;">
-                        ${rowsHtml}
-                    </div>
-
-                </div>
-
-                <div class="trait-roll-total" style="
-                    width:100%;
-                    text-align:center;
-                    font-size:3rem;
-                    font-weight:bold;
-                    color:#5b3a1e;
-                    text-shadow:1px 1px 2px rgba(0,0,0,0.3);
-                    border-top:1px solid #8b5e3c;
-                    padding-top:6px;
-                ">
-                    ${totalDisplay}
-                </div>
-
-            </div>
-        `
-    });
 
     return true;
   }
