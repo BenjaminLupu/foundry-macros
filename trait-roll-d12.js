@@ -86,6 +86,18 @@
   // that case: it is then displayed as a skull instead of the number.
   const totalDisplay = roll.total === 1 ? "💀" : roll.total;
 
+  // Raises (SWADE "prouesses") against the standard target number of 4: one raise per full
+  // 4 points above it, so 8+ = 1, 12+ = 2, 16+ = 3, 20+ = 4, and so on. A short message is
+  // shown below the total only when there is at least one raise (nothing under 8, and no
+  // raise on the critical failure, whose total is 1).
+  const raises = Math.floor(roll.total / 4) - 1;
+  const raisesHtml = raises >= 1
+    ? `<div class="trait-roll-raises" style="width:100%;text-align:center;">
+        <div style="font-size:1.15rem;opacity:0.85;">Et c'est ${raises} ${raises > 1 ? "prouesses" : "prouesse"} ! 🎉</div>
+        <div style="font-size:0.85rem;opacity:0.7;">Si difficulté 4</div>
+      </div>`
+    : "";
+
   // Post the roll result as a styled chat message
   ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ user }),
@@ -143,6 +155,8 @@
                 ">
                     ${totalDisplay}
                 </div>
+
+                ${raisesHtml}
 
             </div>
         `});
