@@ -1,5 +1,6 @@
 /* Free-form dice palette: a standard Foundry window (DialogV2) offers a d4, d6, d8, d10,
-   d12 and a Joker die. Clicking a die's icon adds one; the "−" button removes one.
+   d12 and a Joker die. Clicking a die's icon adds one; the "−" button removes one. A
+   selected die (counter above 0) keeps a colored border around its icon.
    "Lancer" (Roll) sums up every selected die (each one exploding), and if the Joker is
    active, compares that sum against the Joker die alone (also exploding) and keeps the
    higher of the two (the same mechanic as trait-roll.js, generalized from a single die to
@@ -76,10 +77,30 @@
   await dialog.render({ force: true });
   const root = dialog.element;
 
-  // Updates the state (counts / jokerEnabled) and the displayed counter for a given die.
-  // Clicking the icon = +1, clicking "−" = -1 (never below 0). The Joker is a plain on/off
-  // toggle: in SWADE, only one Joker die is ever rolled per roll, regardless of how many
-  // other dice are selected.
+  // Icon border (reproducing Foundry's native hotbar-slot hover look), implemented with JS
+  // listeners rather than a CSS ":hover" rule: a <style> tag placed inside DialogV2 content
+  // does not seem to get applied (likely filtered out, same as for chat messages).
+  // - hovered icon: orange border (takes priority while the mouse is over the icon)
+  // - selected die (counter above 0, or Joker enabled): border kept in another color, so the
+  //   selection is visible at a glance without reading the small counters
+  // - otherwise: no border
+  const HOVER_BORDER_COLOR = "var(--color-border-highlight, #ff6400)";
+  const SELECTED_BORDER_COLOR = "#26c6da";
+
+  const isSelected = (facesKey) => facesKey === "joker" ? jokerEnabled : counts[facesKey] > 0;
+
+  const applyIconBorder = (icon) => {
+    const color = icon.dataset.hovered === "1"
+      ? HOVER_BORDER_COLOR
+      : (isSelected(icon.dataset.faces) ? SELECTED_BORDER_COLOR : null);
+    icon.style.borderColor = color ?? "transparent";
+    icon.style.boxShadow = color ? `0 0 6px ${color}` : "none";
+  };
+
+  // Updates the state (counts / jokerEnabled), the displayed counter and the icon border for a
+  // given die. Clicking the icon = +1, clicking "−" = -1 (never below 0). The Joker is a plain
+  // on/off toggle: in SWADE, only one Joker die is ever rolled per roll, regardless of how
+  // many other dice are selected.
   const updateCount = (facesKey, delta) => {
     if (facesKey === "joker") {
       jokerEnabled = delta > 0;
@@ -88,20 +109,17 @@
     }
     const value = facesKey === "joker" ? (jokerEnabled ? 1 : 0) : counts[facesKey];
     root.querySelectorAll(`.dice-picker-count[data-faces="${facesKey}"]`).forEach(el => el.textContent = String(value));
+    root.querySelectorAll(`.dice-picker-icon[data-faces="${facesKey}"]`).forEach(applyIconBorder);
   };
 
-  // Hover border effect (reproducing Foundry's native hotbar-slot hover look), implemented
-  // with JS listeners rather than a CSS ":hover" rule: a <style> tag placed inside DialogV2
-  // content does not seem to get applied (likely filtered out, same as for chat messages).
-  const HOVER_BORDER_COLOR = "var(--color-border-highlight, #ff6400)";
   root.querySelectorAll(".dice-picker-icon").forEach(icon => {
     icon.addEventListener("mouseenter", () => {
-      icon.style.borderColor = HOVER_BORDER_COLOR;
-      icon.style.boxShadow = `0 0 6px ${HOVER_BORDER_COLOR}`;
+      icon.dataset.hovered = "1";
+      applyIconBorder(icon);
     });
     icon.addEventListener("mouseleave", () => {
-      icon.style.borderColor = "transparent";
-      icon.style.boxShadow = "none";
+      delete icon.dataset.hovered;
+      applyIconBorder(icon);
     });
     icon.addEventListener("click", () => updateCount(icon.dataset.faces, +1));
   });
