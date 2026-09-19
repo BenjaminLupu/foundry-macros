@@ -7,7 +7,10 @@
    an arbitrary pool of dice). "Annuler" (Cancel) closes the palette without rolling.
 
    The Joker die is a simple on/off toggle (never more than one at a time): in SWADE, only
-   one Joker die is ever rolled per roll, regardless of how many other dice are selected.
+   one Joker die is ever rolled per roll. It is also rolled alongside a single trait die, so
+   it cannot be combined with several dice: the Joker is unavailable (dimmed, with an
+   explanatory hint above the dice) while 2+ dice are selected, and while it is active,
+   selecting a die replaces the previously selected one (also explained by a hint).
 
    The result is posted to chat using the same visual style as trait-roll.js. */
 
@@ -58,9 +61,16 @@
   const dialog = new foundry.applications.api.DialogV2({
     window: { title: "Lancer personnalisé" },
     content: `
-      <div style="display:flex;gap:16px;justify-content:center;padding:8px 4px;width:520px;">
-        ${DICE_SIZES.map(dieCellHtml).join("")}
-        ${jokerCellHtml}
+      <div style="width:520px;">
+        <!-- Discreet hint shown while the Joker is active. Its height is always reserved
+             (min-height) so the dice do not jump when the text appears or disappears. -->
+        <div class="dice-picker-hint" style="min-height:1.3em;padding:0 4px;text-align:center;font-size:0.85rem;font-style:italic;opacity:0.75;"></div>
+        <div style="display:flex;gap:16px;justify-content:center;padding:8px 4px;">
+          ${DICE_SIZES.map(dieCellHtml).join("")}
+          <!-- Thin vertical rule separating the Joker from the regular dice -->
+          <div style="width:1px;align-self:stretch;background:currentColor;opacity:0.3;"></div>
+          ${jokerCellHtml}
+        </div>
       </div>
     `,
     buttons: [
@@ -83,33 +93,73 @@
   // - hovered icon: orange border (takes priority while the mouse is over the icon)
   // - selected die (counter above 0, or Joker enabled): border kept in another color, so the
   //   selection is visible at a glance without reading the small counters
+  // - blocked Joker (see below): dimmed, no border, not-allowed cursor
   // - otherwise: no border
   const HOVER_BORDER_COLOR = "var(--color-border-highlight, #ff6400)";
   const SELECTED_BORDER_COLOR = "#26c6da";
 
+  // In SWADE, the Joker (wild die) is rolled alongside a single trait die: it cannot be
+  // combined with several dice. So, the Joker can be added next to at most one other die,
+  // and while it is active, selecting a die replaces the previously selected one.
+  // Hint shown above the dice: explains why a die cannot be selected / the Joker is unavailable
+  const JOKER_ACTIVE_HINT = "Dé Joker actif : un seul dé peut être sélectionné.";
+  const JOKER_BLOCKED_HINT = "Plusieurs dés sélectionnés : le dé Joker ne peut pas être ajouté.";
+  // Notification shown when the user clicks the blocked Joker anyway
+  const JOKER_BLOCKED_MESSAGE = "Le dé Joker se lance avec un seul dé. Retire des dés pour l'activer.";
+
+  const totalDice = () => DICE_SIZES.reduce((sum, faces) => sum + counts[faces], 0);
+  const isJokerBlocked = () => !jokerEnabled && totalDice() >= 2;
+
   const isSelected = (facesKey) => facesKey === "joker" ? jokerEnabled : counts[facesKey] > 0;
 
   const applyIconBorder = (icon) => {
-    const color = icon.dataset.hovered === "1"
-      ? HOVER_BORDER_COLOR
-      : (isSelected(icon.dataset.faces) ? SELECTED_BORDER_COLOR : null);
+    const isJoker = icon.dataset.faces === "joker";
+    const blocked = isJoker && isJokerBlocked();
+    const color = blocked
+      ? null
+      : (icon.dataset.hovered === "1"
+        ? HOVER_BORDER_COLOR
+        : (isSelected(icon.dataset.faces) ? SELECTED_BORDER_COLOR : null));
     icon.style.borderColor = color ?? "transparent";
     icon.style.boxShadow = color ? `0 0 6px ${color}` : "none";
+    if (isJoker) {
+      icon.style.opacity = blocked ? "0.4" : "1";
+      icon.style.cursor = blocked ? "not-allowed" : "pointer";
+    }
   };
 
-  // Updates the state (counts / jokerEnabled), the displayed counter and the icon border for a
-  // given die. Clicking the icon = +1, clicking "−" = -1 (never below 0). The Joker is a plain
-  // on/off toggle: in SWADE, only one Joker die is ever rolled per roll, regardless of how
-  // many other dice are selected.
+  // Refreshes every counter and icon (a change on one die can affect the others: the Joker
+  // becomes blocked/available, a selected die replaces the previous one).
+  const refreshPalette = () => {
+    root.querySelectorAll(".dice-picker-count").forEach(el => {
+      const facesKey = el.dataset.faces;
+      el.textContent = String(facesKey === "joker" ? (jokerEnabled ? 1 : 0) : counts[facesKey]);
+    });
+    root.querySelectorAll(".dice-picker-icon").forEach(applyIconBorder);
+    root.querySelector(".dice-picker-hint").textContent =
+      jokerEnabled ? JOKER_ACTIVE_HINT : (isJokerBlocked() ? JOKER_BLOCKED_HINT : "");
+  };
+
+  // Updates the state (counts / jokerEnabled) for a given die, then refreshes the palette.
+  // Clicking the icon = +1, clicking "−" = -1 (never below 0). The Joker is a plain on/off
+  // toggle: only one Joker die is ever rolled per roll.
+  // - Joker with 2+ dice selected: refused, with a message
+  // - a die added while the Joker is active: replaces the previously selected die, so the
+  //   Joker is always rolled with a single die
   const updateCount = (facesKey, delta) => {
     if (facesKey === "joker") {
+      if (delta > 0 && isJokerBlocked()) {
+        ui.notifications.warn(JOKER_BLOCKED_MESSAGE);
+        return;
+      }
       jokerEnabled = delta > 0;
+    } else if (delta > 0 && jokerEnabled) {
+      DICE_SIZES.forEach(faces => counts[faces] = 0);
+      counts[facesKey] = 1;
     } else {
       counts[facesKey] = Math.max(0, (counts[facesKey] || 0) + delta);
     }
-    const value = facesKey === "joker" ? (jokerEnabled ? 1 : 0) : counts[facesKey];
-    root.querySelectorAll(`.dice-picker-count[data-faces="${facesKey}"]`).forEach(el => el.textContent = String(value));
-    root.querySelectorAll(`.dice-picker-icon[data-faces="${facesKey}"]`).forEach(applyIconBorder);
+    refreshPalette();
   };
 
   root.querySelectorAll(".dice-picker-icon").forEach(icon => {
