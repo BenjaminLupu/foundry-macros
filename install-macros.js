@@ -1,4 +1,5 @@
-/* GENERATED FILE: do not edit. Edit build/install-macros.template.js (or the macro
+/* Generated on 20/09/2026 08:40:51
+   GENERATED FILE: do not edit. Edit build/install-macros.template.js (or the macro
    sources / the MACROS table in build/build.py), then run: python build/build.py
 
    Install macro: creates (or updates, if it already exists) each of the

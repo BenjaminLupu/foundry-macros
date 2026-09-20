@@ -1,4 +1,5 @@
-/* GENERATED FILE: do not edit. Edit build/uninstall-macros.template.js (or the MACROS
+/* Generated on 20/09/2026 08:40:51
+   GENERATED FILE: do not edit. Edit build/uninstall-macros.template.js (or the MACROS
    table in build/build.py), then run: python build/build.py
 
    Macro: cleans up everything install-macros.js installs.

@@ -13,10 +13,16 @@ Change a macro or the table, run this script, commit the result.
 The two generated files are built from build/*.template.js: edit the
 templates for anything that is not a macro (installer logic, header comments),
 never the generated files.
+
+Each generated file starts with "Generated on dd/mm/yyyy hh:mm:ss" (local time).
+That time is the last time the file actually changed: an up-to-date file is left
+untouched, so running the script again does not rewrite it, and --check ignores
+the timestamp.
 """
 import json
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -132,6 +138,17 @@ def icon_problems():
     return problems
 
 
+# Generation timestamp in the header comment of the generated files: "dd/mm/yyyy hh:mm:ss".
+# render() leaves the placeholder in place; it is only filled in when a file is written.
+TIMESTAMP_PLACEHOLDER = "__GENERATED_AT__"
+TIMESTAMP_RE = re.compile(r"(Generated on )\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}")
+
+
+def without_timestamp(text):
+    """A generated file with its timestamp replaced by the placeholder, to compare it with render()."""
+    return TIMESTAMP_RE.sub(r"\g<1>" + TIMESTAMP_PLACEHOLDER, text, count=1)
+
+
 def main():
     check = "--check" in sys.argv[1:]
     stale = []
@@ -139,15 +156,16 @@ def main():
         expected = render(template)
         target = ROOT / output
         current = read_text(target) if target.exists() else None
-        if current == expected:
+        if current is not None and without_timestamp(current) == expected:
             print(f"{output}: à jour")
             continue
         if check:
             stale.append(output)
             print(f"{output}: PÉRIMÉ (relancer python build/build.py)")
         else:
-            target.write_text(expected, encoding="utf-8", newline="\n")
-            print(f"{output}: régénéré")
+            generated_at = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            target.write_text(expected.replace(TIMESTAMP_PLACEHOLDER, generated_at), encoding="utf-8", newline="\n")
+            print(f"{output}: régénéré ({generated_at})")
     problems = icon_problems()
     for problem in problems:
         print(f"ICÔNE DÉSYNCHRONISÉE — {problem}")
