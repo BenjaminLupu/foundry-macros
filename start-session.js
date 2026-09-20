@@ -240,20 +240,24 @@ if (!game._whisperReplyHooked) {
 // Those macros do not build the chat card themselves: they store what was rolled in the message
 // flags (flags.world.traitRoll or .freeRoll) and post a plain text fallback as the content. The card
 // is drawn here, every time the message is rendered, on every client, from those flags. This is
-// what makes the card adjustable after the roll: the "-" / "+" buttons update the flags, Foundry
-// re-renders the message everywhere, and the card is redrawn with the new modifier/difficulty.
-// (Scripts and click handlers written in a message's own HTML are stripped by Foundry, hence
-// the buttons are wired up here.)
+// what makes the card adjustable after the roll: the "-" / "+" buttons only change the values
+// being set (kept in memory on the client of the person setting them); the "Jet définitif" button,
+// then "Ajuster", stores them in the flags, Foundry re-renders the message everywhere, and the card
+// is redrawn with the new modifier/difficulty. (Scripts and click handlers written in a message's
+// own HTML are stripped by Foundry, hence the buttons are wired up here.)
 //
 // flags.world.traitRoll: a SWADE trait roll (trait die + wild die, the higher is kept)
 //   dice       : [{ type: "trait" | "wild", faces, results: [first roll, explosion, ...] }, ...]
 //   modifier   : -6 .. +6, added to every die line and to the total (default 0)
 //   difficulty : target number, 0 or more (default 4); raises for every 4 points above it
+//   final      : false until "Jet définitif" is clicked. The modifier, the result (Réussite / Échec,
+//                raises) and the color of the total are only shown once the roll is final
 //
 // flags.world.freeRoll: any other palette roll (all the dice are added up, no raises)
 //   dice       : [{ type: "die" | "wild", faces, results: [...] }, ...]
 //   modifier   : -6 .. +6, added once to the sum of the dice (default 0)
 //   difficulty : target number, 0 or more (default 0 = no difficulty: no result is shown)
+//   final      : false until "Jet définitif" is clicked (same as above)
 // ---------------------------------------------------------------------------------------------
 if (!game._traitRollCardHooked) {
 
@@ -354,11 +358,35 @@ if (!game._traitRollCardHooked) {
                     <span>${lineText}</span>
                 </div>`;
 
-    // The modifier / difficulty controls, shown to the author of the roll and to the GM only.
-    const adjustZoneHtml = (modifier, difficulty) => `
+    // The button under the controls: "Jet définitif" the first time (it applies the modifier and the
+    // difficulty and reveals the result), then "Ajuster" (it applies the new values). Same look as
+    // the "-" / "+" buttons, with the same hover effect done in JS.
+    const applyButton = (label) => `
+        <button type="button" class="trait-roll-apply" style="
+            background: transparent;
+            border: 1px solid rgb(159, 132, 117);
+            border-radius: 4px;
+            color: #5b3a1e;
+            font-family: 'Segoe UI', Verdana, Arial, sans-serif;
+            font-size: 0.95rem;
+            font-weight: bold;
+            line-height: 1;
+            width: auto;
+            flex: 0 0 auto;
+            margin: 2px auto 0;
+            padding: 7px 16px;
+            cursor: pointer;
+            transition: border-color 0.15s ease, background-color 0.15s ease;
+        ">${label}</button>`;
+
+    // The modifier / difficulty controls and their button, shown to the author of the roll and to
+    // the GM only. "settings" are the values being set: they only reach the card when the button
+    // is clicked.
+    const adjustZoneHtml = (settings, isFinal) => `
             <div class="trait-roll-adjust" style="border-top:1px solid rgba(139,94,60,0.4);padding-top:8px;display:flex;flex-direction:column;gap:6px;">
-                ${stepperRow("Modificateur", "modifier", formatModifier(modifier), modifierColor(modifier), modifier > MODIFIER_MIN, modifier < MODIFIER_MAX)}
-                ${stepperRow("Difficulté", "difficulty", String(difficulty), "inherit", difficulty > DIFFICULTY_MIN, true)}
+                ${stepperRow("Modificateur", "modifier", formatModifier(settings.modifier), modifierColor(settings.modifier), settings.modifier > MODIFIER_MIN, settings.modifier < MODIFIER_MAX)}
+                ${stepperRow("Difficulté", "difficulty", String(settings.difficulty), "inherit", settings.difficulty > DIFFICULTY_MIN, true)}
+                <div style="display:flex;justify-content:center;">${applyButton(isFinal ? "Ajuster" : "Jet définitif")}</div>
             </div>`;
 
     // The parchment card shared by every roll: the author's avatar and one line per die, the big
@@ -401,50 +429,59 @@ if (!game._traitRollCardHooked) {
                 ${belowTotalHtml}
             </div>`;
 
-    // SWADE trait roll card (flags.world.traitRoll), drawn from the flags. "canAdjust" (author of
-    // the roll, or GM) decides whether the modifier/difficulty controls are shown.
-    const buildTraitRollCard = (message, data, canAdjust) => {
-        const modifier = data.modifier ?? DEFAULT_MODIFIER;
+    // SWADE trait roll card (flags.world.traitRoll), drawn from the flags. Until "Jet définitif" is
+    // clicked (flags.world.traitRoll.final), the card shows the raw roll: the dice, the best die as
+    // the total (and the skull on a double 1), with no modifier, no result and no color. "canAdjust"
+    // (author of the roll, or GM) decides whether the controls are shown, with "settings", the
+    // values being set.
+    const buildTraitRollCard = (message, data, canAdjust, settings) => {
+        const isFinal = data.final === true;
+        const modifier = isFinal ? (data.modifier ?? DEFAULT_MODIFIER) : 0;
         const difficulty = data.difficulty ?? DEFAULT_TRAIT_DIFFICULTY;
 
         // The roll keeps the higher of the two dice (SWADE); the modifier applies to the result.
         const total = Math.max(...data.dice.map(die => sum(die.results) + modifier));
 
         // Critical failure: the trait die and the wild die both show 1 on their first roll. It
-        // depends on the dice only, whatever the modifier: the skull replaces the total.
+        // depends on the dice only, so it shows at once and whatever the modifier: the skull
+        // replaces the total.
         const criticalFailure = data.dice.every(die => die.results[0] === 1);
         const totalDisplay = criticalFailure ? "💀" : formatNumber(total);
 
-        // The total is green on a success and red on a failure (the skull keeps its own look)
+        // Once final, the total is green on a success and red on a failure (the skull keeps its own look)
         const success = total >= difficulty;
-        const totalColor = criticalFailure ? undefined : (success ? COLOR_POSITIVE : COLOR_NEGATIVE);
+        const totalColor = (isFinal && !criticalFailure) ? (success ? COLOR_POSITIVE : COLOR_NEGATIVE) : undefined;
 
         const diceRows = data.dice.map(die =>
             dieRowHtml(die, die.type === "wild" ? "Dé sauvage" : `Dé de trait (d${die.faces})`, formatDieLine(die, modifier))
         ).join("");
 
-        // Result, shown from the start (difficulty 4, modifier 0 by default): Échec / Réussite
-        // against the difficulty, and one raise per full 4 points above it. Nothing about the
-        // result on a critical failure.
-        const lines = [];
-        if (!criticalFailure) {
-            const raises = success ? Math.floor((total - difficulty) / 4) : 0;
-            lines.push(`<div style="font-size:1.3rem;font-weight:bold;">${success ? "Réussite" : "Échec"}</div>`);
-            if (raises >= 1) {
-                lines.push(`<div style="font-size:1.15rem;">Et c'est ${raises} ${raises > 1 ? "prouesses" : "prouesse"} ! 🎉</div>`);
+        // Result, once final: Échec / Réussite against the difficulty, and one raise per full 4
+        // points above it. Nothing about the result on a critical failure.
+        let resultHtml = "";
+        if (isFinal) {
+            const lines = [];
+            if (!criticalFailure) {
+                const raises = success ? Math.floor((total - difficulty) / 4) : 0;
+                lines.push(`<div style="font-size:1.3rem;font-weight:bold;">${success ? "Réussite" : "Échec"}</div>`);
+                if (raises >= 1) {
+                    lines.push(`<div style="font-size:1.15rem;">Et c'est ${raises} ${raises > 1 ? "prouesses" : "prouesse"} ! 🎉</div>`);
+                }
             }
+            lines.push(`<div style="font-size:0.85rem;opacity:0.7;">Difficulté ${difficulty}, modificateur ${formatModifier(modifier)}</div>`);
+            resultHtml = `<div class="trait-roll-result" style="text-align:center;">${lines.join("")}</div>`;
         }
-        lines.push(`<div style="font-size:0.85rem;opacity:0.7;">Difficulté ${difficulty}, modificateur ${formatModifier(modifier)}</div>`);
-        const resultHtml = `<div class="trait-roll-result" style="text-align:center;">${lines.join("")}</div>`;
 
-        return cardHtml(message.author, diceRows, totalDisplay, totalColor, resultHtml + (canAdjust ? adjustZoneHtml(modifier, difficulty) : ""));
+        return cardHtml(message.author, diceRows, totalDisplay, totalColor, resultHtml + (canAdjust ? adjustZoneHtml(settings, isFinal) : ""));
     };
 
     // Free roll card (flags.world.freeRoll): any palette roll that is not a trait roll. Every die
     // is added up (nothing is compared with a wild die), the modifier is added once to the sum, and
-    // there are no raises.
-    const buildFreeRollCard = (message, data, canAdjust) => {
-        const modifier = data.modifier ?? DEFAULT_MODIFIER;
+    // there are no raises. Same as the trait roll card, the modifier, the result and the color only
+    // show once "Jet définitif" has been clicked.
+    const buildFreeRollCard = (message, data, canAdjust, settings) => {
+        const isFinal = data.final === true;
+        const modifier = isFinal ? (data.modifier ?? DEFAULT_MODIFIER) : 0;
         const difficulty = data.difficulty ?? DEFAULT_FREE_DIFFICULTY;
 
         const diceTotal = sum(data.dice.map(die => sum(die.results)));
@@ -460,11 +497,11 @@ if (!game._traitRollCardHooked) {
         const calculationHtml = modifier === 0 ? "" : `
                 <div class="trait-roll-calculation" style="text-align:center;font-size:1.1rem;">${diceTotal} <span style="color:${modifierColor(modifier)};font-weight:bold;">${modifier > 0 ? "+" : MINUS} ${Math.abs(modifier)}</span></div>`;
 
-        // Result: only with a difficulty (0 = no difficulty, nothing is shown). The total is then
-        // green on a success and red on a failure.
+        // Result: only once final and with a difficulty (0 = no difficulty, nothing is shown). The
+        // total is then green on a success and red on a failure.
         let resultHtml = "";
         let totalColor;
-        if (difficulty >= 1) {
+        if (isFinal && difficulty >= 1) {
             totalColor = total >= difficulty ? COLOR_POSITIVE : COLOR_NEGATIVE;
             resultHtml = `
                 <div class="trait-roll-result" style="text-align:center;">
@@ -473,7 +510,7 @@ if (!game._traitRollCardHooked) {
                 </div>`;
         }
 
-        return cardHtml(message.author, diceRows, formatNumber(total), totalColor, calculationHtml + resultHtml + (canAdjust ? adjustZoneHtml(modifier, difficulty) : ""));
+        return cardHtml(message.author, diceRows, formatNumber(total), totalColor, calculationHtml + resultHtml + (canAdjust ? adjustZoneHtml(settings, isFinal) : ""));
     };
 
     // The two kinds of card: the message flag holding the roll, how to draw it, and the default
@@ -483,19 +520,30 @@ if (!game._traitRollCardHooked) {
         freeRoll: { build: buildFreeRollCard, defaultDifficulty: DEFAULT_FREE_DIFFICULTY }
     };
 
-    Hooks.on("renderChatMessageHTML", (message, html) => {
-        const flagKey = Object.keys(ROLL_CARDS).find(key => message.getFlag("world", key)?.dice?.length);
-        if (!flagKey) return; // not a roll card
+    // Values being set with the "-" / "+" buttons, per message. They are kept in memory on the
+    // client of the person setting them: nothing is sent to the others until the "Jet définitif" /
+    // "Ajuster" button is clicked. They survive a redraw of the chat, not a reload of the page. An
+    // entry remembers the applied values it started from and is dropped if they changed meanwhile.
+    const pendingSettings = new Map();
 
+    // Draws the card of a message into its element, and wires up its buttons.
+    const renderRollCard = (message, html, flagKey) => {
+        const card = ROLL_CARDS[flagKey];
+        const data = message.getFlag("world", flagKey);
         const contentEl = html.querySelector(".message-content");
         if (!contentEl) return;
 
+        // The values applied to the card, and the values being set (the applied ones by default)
+        const applied = { modifier: data.modifier ?? DEFAULT_MODIFIER, difficulty: data.difficulty ?? card.defaultDifficulty };
+        const appliedKey = `${applied.modifier}|${applied.difficulty}|${data.final === true}`;
+        const pending = pendingSettings.get(message.id);
+        const settings = pending?.appliedKey === appliedKey ? pending.settings : { ...applied };
+
         // Only the author of the roll and the GM can adjust it.
         const canAdjust = game.user.isGM || message.author?.id === game.user.id;
-        contentEl.innerHTML = ROLL_CARDS[flagKey].build(message, message.getFlag("world", flagKey), canAdjust);
+        contentEl.innerHTML = card.build(message, data, canAdjust, settings);
 
-        html.querySelectorAll(".trait-roll-step").forEach(btn => {
-
+        html.querySelectorAll(".trait-roll-step, .trait-roll-apply").forEach(btn => {
             // Hover fill, same as the "Répondre" button (a disabled button does not react)
             btn.addEventListener("mouseenter", () => {
                 if (btn.disabled) return;
@@ -508,30 +556,45 @@ if (!game._traitRollCardHooked) {
                 btn.style.borderColor = "rgb(159, 132, 117)";
                 btn.style.color = "#5b3a1e";
             });
+        });
 
-            // Each click is applied at once: the new value is stored in the flags, Foundry then
-            // re-renders the message on every client and the card is redrawn by this hook.
-            btn.addEventListener("click", async () => {
-                const current = message.getFlag("world", flagKey);
+        // "-" / "+": only change the values being set, then redraw the card (which keeps showing
+        // the applied values)
+        html.querySelectorAll(".trait-roll-step").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const next = { ...settings };
                 const delta = Number(btn.dataset.delta);
-                let modifier = current.modifier ?? DEFAULT_MODIFIER;
-                let difficulty = current.difficulty ?? ROLL_CARDS[flagKey].defaultDifficulty;
                 if (btn.dataset.field === "modifier") {
-                    modifier = Math.min(MODIFIER_MAX, Math.max(MODIFIER_MIN, modifier + delta));
+                    next.modifier = Math.min(MODIFIER_MAX, Math.max(MODIFIER_MIN, next.modifier + delta));
                 } else {
-                    difficulty = Math.max(DIFFICULTY_MIN, difficulty + delta);
+                    next.difficulty = Math.max(DIFFICULTY_MIN, next.difficulty + delta);
                 }
-                try {
-                    await message.update({
-                        [`flags.world.${flagKey}.modifier`]: modifier,
-                        [`flags.world.${flagKey}.difficulty`]: difficulty
-                    });
-                } catch (error) {
-                    console.error("Custom | Could not adjust the roll card", error);
-                    ui.notifications.warn("Impossible de modifier cette carte.");
-                }
+                pendingSettings.set(message.id, { appliedKey, settings: next });
+                renderRollCard(message, html, flagKey);
             });
         });
+
+        // "Jet définitif" / "Ajuster": apply the values being set. They are stored in the flags,
+        // Foundry then re-renders the message on every client and the card is redrawn by this hook.
+        html.querySelector(".trait-roll-apply")?.addEventListener("click", async () => {
+            try {
+                await message.update({
+                    [`flags.world.${flagKey}.modifier`]: settings.modifier,
+                    [`flags.world.${flagKey}.difficulty`]: settings.difficulty,
+                    [`flags.world.${flagKey}.final`]: true
+                });
+                pendingSettings.delete(message.id);
+            } catch (error) {
+                console.error("Custom | Could not adjust the roll card", error);
+                ui.notifications.warn("Impossible de modifier cette carte.");
+            }
+        });
+    };
+
+    Hooks.on("renderChatMessageHTML", (message, html) => {
+        const flagKey = Object.keys(ROLL_CARDS).find(key => message.getFlag("world", key)?.dice?.length);
+        if (!flagKey) return; // not a roll card
+        renderRollCard(message, html, flagKey);
     });
 }
 
