@@ -1,5 +1,12 @@
 {
+  "benny.api_missing": "Cette macro nécessite une version plus récente du système SWADE (User#spendBenny est introuvable).",
   "benny.everyone": "Vous gagnez tous un Jeton !",
+  "benny.no_character": "Aucun personnage ne t'est assigné : tu n'as pas de jetons.",
+  "benny.none_left": "Tu n'as plus de jeton.",
+  "benny.not_allowed": "Tu n'as pas le droit de dépenser ce jeton.",
+  "benny.remaining.one": "{n} jeton restant",
+  "benny.remaining.other": "{n} jetons restants",
+  "benny.spent": "{name} dépense un jeton",
 
   "card.adjust": "Ajuster",
   "card.details_free": "Difficulté {difficulty}",
@@ -33,6 +40,7 @@
 
   "macro.custom_roll": "Lancer personnalisé",
   "macro.private_message": "Message privé",
+  "macro.spend_benny": "Dépenser un jeton",
   "macro.trait_roll": "Lancer 1d{die}+Joker",
 
   "palette.hint_wild_die_active": "Dé Joker actif : un seul dé peut être sélectionné.",

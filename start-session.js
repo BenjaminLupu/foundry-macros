@@ -263,6 +263,11 @@ if (!game._whisperReplyHooked) {
 //   modifier   : -6 .. +6, added once to the sum of the dice (default 0)
 //   difficulty : target number, 0 or more (default 0 = no difficulty: no result is shown)
 //   final      : false until "Jet définitif" is clicked (same as above)
+//
+// flags.world.bennyCard: a Benny spent (posted by spend-benny.js), a card without controls
+//   name       : who spent it (the assigned character, or the GM's account name)
+//   avatar     : the image shown on the card
+//   remaining  : the number of Bennies left, shown in small text under the message (optional)
 // ---------------------------------------------------------------------------------------------
 if (!game._traitRollCardHooked) {
 
@@ -637,7 +642,43 @@ if (!game._traitRollCardHooked) {
         });
     };
 
+    // A Benny spent (flags.world.bennyCard): the same parchment card, with the avatar and one line,
+    // "X spends a Benny", in the language of the reader, then, in small text, centered on the whole
+    // width, the number of Bennies left (when it was recorded: older cards do not have it). This
+    // shows the GM's pool too when the GM spends one. The line is in bold when there is only one Benny left,
+    // and in red (COLOR_NEGATIVE) when there is none. The text is escaped before it goes into the HTML.
+    const bennyRemainingStyle = (remaining) =>
+        remaining === 0 ? `color:${COLOR_NEGATIVE};opacity:1;` : (remaining === 1 ? "font-weight:bold;" : "");
+
+    const buildBennyCard = (data) => `
+            <div class="swade-chat-message benny-card" style="
+                display:flex;
+                flex-direction:column;
+                gap:8px;
+                background:linear-gradient(145deg,#f6ecd7,#e6d8b3);
+                border:2px solid #8b5e3c;
+                border-radius:12px;
+                padding:12px;
+                box-shadow:2px 2px 6px rgba(0,0,0,0.3);
+                font-family: 'Garamond', 'Palatino Linotype', serif;
+                color:#3b2f20;
+            ">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <img src="${foundry.utils.escapeHTML(data.avatar ?? "icons/svg/mystery-man.svg")}" alt="${foundry.utils.escapeHTML(t("common.avatar_of", { name: data.name }))}" style="width:64px;height:64px;border-radius:6px;border:1px solid #8b5e3c;object-fit:cover;" />
+                    <div style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:1.3rem;font-weight:bold;color:#5b3a1e;">${foundry.utils.escapeHTML(t("benny.spent", { name: data.name }))}</div>
+                </div>
+                ${Number.isInteger(data.remaining) ? `<div class="benny-remaining" style="width:100%;text-align:center;font-size:0.85rem;opacity:0.7;${bennyRemainingStyle(data.remaining)}">${foundry.utils.escapeHTML(t("benny.remaining", { n: data.remaining }))}</div>` : ""}
+            </div>`;
+
     Hooks.on("renderChatMessageHTML", (message, html) => {
+        // A Benny spent (spend-benny.js)
+        const benny = message.getFlag("world", "bennyCard");
+        if (benny?.name) {
+            const contentEl = html.querySelector(".message-content");
+            if (contentEl) contentEl.innerHTML = buildBennyCard(benny);
+            return;
+        }
+
         const flagKey = Object.keys(ROLL_CARDS).find(key => message.getFlag("world", key)?.dice?.length);
         if (!flagKey) return; // not a roll card
         renderRollCard(message, html, flagKey);

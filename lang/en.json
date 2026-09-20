@@ -1,5 +1,12 @@
 {
+  "benny.api_missing": "This macro needs a more recent SWADE system (User#spendBenny is missing).",
   "benny.everyone": "Everyone gets a Benny!",
+  "benny.no_character": "You have no assigned character, so you have no Bennies.",
+  "benny.none_left": "You have no Benny left.",
+  "benny.not_allowed": "You are not allowed to spend this Benny.",
+  "benny.remaining.one": "{n} Benny left",
+  "benny.remaining.other": "{n} Bennies left",
+  "benny.spent": "{name} spends a Benny",
 
   "card.adjust": "Adjust",
   "card.details_free": "Target Number {difficulty}",
@@ -33,6 +40,7 @@
 
   "macro.custom_roll": "Custom roll",
   "macro.private_message": "Private message",
+  "macro.spend_benny": "Spend a Benny",
   "macro.trait_roll": "Roll 1d{die} + Wild Die",
 
   "palette.hint_wild_die_active": "Wild Die active: only one die can be selected.",

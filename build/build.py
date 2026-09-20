@@ -57,7 +57,8 @@ MACROS = [
     {"key": "macro-1d10-joker", "name": ("macro.trait_roll", {"die": 10}), "slot": 4, "source": "trait-roll-d10.js", "icon": "d10-wild-die.svg", "refresh": False},
     {"key": "macro-1d12-joker", "name": ("macro.trait_roll", {"die": 12}), "slot": 5, "source": "trait-roll-d12.js", "icon": "d12-wild-die.svg", "refresh": False},
     {"key": "custom-roll", "name": ("macro.custom_roll", {}), "slot": 6, "source": "custom-roll.js", "icon": "custom-roll.svg", "refresh": False},
-    {"key": "macro-private-message", "name": ("macro.private_message", {}), "slot": 7, "source": "private-message.js", "icon": "private-message.svg", "refresh": False},
+    {"key": "macro-spend-benny", "name": ("macro.spend_benny", {}), "slot": 7, "source": "spend-benny.js", "icon": "spend-benny.svg", "refresh": False},
+    {"key": "macro-private-message", "name": ("macro.private_message", {}), "slot": 8, "source": "private-message.js", "icon": "private-message.svg", "refresh": False},
     {"key": "macro-session-start", "name": "start-session", "slot": None, "source": "start-session.js", "icon": None, "refresh": True},
 ]
 
