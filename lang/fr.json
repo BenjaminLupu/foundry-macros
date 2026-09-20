@@ -7,6 +7,7 @@
   "card.difficulty": "Difficulté",
   "card.failure": "Échec",
   "card.final_roll": "Jet définitif",
+  "card.minimum_result": "Le résultat d'un dé ne descend jamais sous 1",
   "card.modifier": "Modificateur",
   "card.raises.one": "Et c'est {n} prouesse ! 🎉",
   "card.raises.other": "Et c'est {n} prouesses ! 🎉",

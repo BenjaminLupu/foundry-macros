@@ -7,6 +7,7 @@
   "card.difficulty": "Target Number",
   "card.failure": "Failure",
   "card.final_roll": "Final roll",
+  "card.minimum_result": "A die result is never below 1",
   "card.modifier": "Modifier",
   "card.raises.one": "And that's {n} raise! 🎉",
   "card.raises.other": "And that's {n} raises! 🎉",

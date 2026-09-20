@@ -306,16 +306,25 @@ if (!game._traitRollCardHooked) {
     const modifierColor = (modifier) =>
         modifier > 0 ? COLOR_POSITIVE : (modifier < 0 ? COLOR_NEGATIVE : "inherit");
 
+    // The result of a die with a modifier: never below 1, whatever the modifier (a die that rolled 5
+    // with a -6 counts as 1, not as -1).
+    const dieResult = (die, modifier) => Math.max(1, sum(die.results) + modifier);
+
     // Results line of one die: the results (💥 marks an exploded one), then the modifier (green
     // if positive, red if negative), then "= sum" as soon as there is something to add up:
     //   5            (no explosion, no modifier)
     //   8💥 + 3 = 11  (explosion)
     //   5 + 2 = 7    (modifier, the "+ 2" being green)
+    //   5 − 6 → 1    (the modifier would take the die below 1: it counts as 1, and a tooltip says so)
     const formatDieLine = (die, modifier) => {
         const text = die.results.map(result => result === die.faces ? `${result}💥` : `${result}`).join(" + ");
         if (!hasExploded(die) && modifier === 0) return text;
         const modifierHtml = modifier === 0 ? "" : ` <span style="color:${modifierColor(modifier)};font-weight:bold;">${modifier > 0 ? "+" : MINUS} ${Math.abs(modifier)}</span>`;
-        return `${text}${modifierHtml} = ${formatNumber(sum(die.results) + modifier)}`;
+        const raw = sum(die.results) + modifier;
+        const resultHtml = raw < 1
+            ? `<span title="${foundry.utils.escapeHTML(t("card.minimum_result"))}">→ 1</span>`
+            : `= ${formatNumber(raw)}`;
+        return `${text}${modifierHtml} ${resultHtml}`;
     };
 
     // One flat "-" / "+" button, same look as the "Répondre" button of the private messages.
@@ -439,8 +448,9 @@ if (!game._traitRollCardHooked) {
         const modifier = isFinal ? (data.modifier ?? DEFAULT_MODIFIER) : 0;
         const difficulty = data.difficulty ?? DEFAULT_TRAIT_DIFFICULTY;
 
-        // The roll keeps the higher of the two dice (SWADE); the modifier applies to the result.
-        const total = Math.max(...data.dice.map(die => sum(die.results) + modifier));
+        // The roll keeps the higher of the two dice (SWADE); the modifier applies to each die, and a
+        // die is never below 1 (dieResult).
+        const total = Math.max(...data.dice.map(die => dieResult(die, modifier)));
 
         // Critical failure: the trait die and the wild die both show 1 on their first roll. It
         // depends on the dice only, so it shows at once and whatever the modifier: the skull
