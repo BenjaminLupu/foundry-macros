@@ -567,6 +567,17 @@ if (!game._traitRollCardHooked) {
         appliedSeen.set(message.id, appliedKey);
         if (previousKey !== undefined && previousKey !== appliedKey) {
             setTimeout(() => {
+                // A card of this message may already be on screen in the chat notifications. Cards that
+                // have expired stay in the page but hidden (display: none), so only a visible one
+                // counts. If there is one, it is redrawn in place with the new values instead of
+                // notifying again: a new notification would make it disappear and appear again, and
+                // could stack a second card.
+                const onScreen = [...document.querySelectorAll(`#chat-notifications li.chat-message[data-message-id="${CSS.escape(message.id)}"]`)]
+                    .filter(card => card.offsetParent !== null);
+                if (onScreen.length) {
+                    onScreen.forEach(card => renderRollCard(message, card, flagKey));
+                    return;
+                }
                 if (ui.chat?._shouldShowNotifications && !ui.chat._shouldShowNotifications()) return;
                 ui.chat?.notify?.(message, { newMessage: true });
             }, 0);
