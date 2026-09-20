@@ -92,7 +92,7 @@ if (!game._whisperReplyHooked) {
                 content: `
           <div class="form-group" style="width:600px;">
             <label for="reply-text">${t("whisper.message")}</label>
-            <textarea id="reply-text" rows="4" class="w-full" style="font-size:1.1rem;"></textarea>
+            <textarea id="reply-text" rows="4" class="w-full" style="font-size:1.1rem;" autofocus></textarea>
           </div>
       `,
                 buttons: [{
@@ -210,7 +210,12 @@ if (!game._whisperReplyHooked) {
                     }
                 }, { action: "cancel", label: t("common.cancel") }]
             });
-            dlg.render({ force: true });
+            await dlg.render({ force: true });
+
+            // The cursor goes straight into the reply field. It is asked twice (the "autofocus"
+            // attribute above, and here) because Foundry may focus a button of the dialog while it
+            // renders: the field then takes the focus back once the dialog is displayed.
+            dlg.element?.querySelector("#reply-text")?.focus();
         };
 
         // "Répondre" (Reply) button — replies to the original author

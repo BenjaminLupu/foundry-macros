@@ -13,7 +13,7 @@
       </div>
       <div class="form-group">
         <label for="whisper-message">${t("whisper.message")}</label>
-        <textarea id="whisper-message" name="message" rows="4" class="w-full" style="font-size:1.1rem;"></textarea>
+        <textarea id="whisper-message" name="message" rows="4" class="w-full" style="font-size:1.1rem;" autofocus></textarea>
       </div>
     `,
         buttons: [{
@@ -140,5 +140,10 @@
         }, { action: "cancel", label: t("common.cancel") }]
     });
 
-    dialog.render({ force: true });
+    await dialog.render({ force: true });
+
+    // The cursor goes straight into the message field (same as the reply in start-session.js): the
+    // "autofocus" attribute above, and here explicitly, because Foundry may focus a button of the
+    // dialog while it renders.
+    dialog.element?.querySelector("#whisper-message")?.focus();
 })();
