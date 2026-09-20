@@ -1,24 +1,24 @@
 (async () => {
     const players = game.users.filter(u => u.active && u.id !== game.user.id);
-    if (!players.length) return ui.notifications.warn("Aucun joueur actif.");
+    if (!players.length) return ui.notifications.warn(t("whisper.none_active"));
 
     const optionsHtml = players.map(p => `<option value="${p.id}">${p.name}</option>`).join("");
 
     const dialog = new foundry.applications.api.DialogV2({
-        window: { title: "Envoyer un message privé" },
+        window: { title: t("whisper.send_title") },
         content: `
       <div class="form-group" style="width:600px;">
-        <label for="recipient">Destinataire :</label>
+        <label for="recipient">${t("whisper.recipient")}</label>
         <select id="recipient" name="recipient" class="w-full">${optionsHtml}</select>
       </div>
       <div class="form-group">
-        <label for="whisper-message">Message :</label>
+        <label for="whisper-message">${t("whisper.message")}</label>
         <textarea id="whisper-message" name="message" rows="4" class="w-full" style="font-size:1.1rem;"></textarea>
       </div>
     `,
         buttons: [{
             action: "send",
-            label: "Envoyer",
+            label: t("common.send"),
             default: true,
             callback: (_event, button) => {
                 const form = button.closest("form");
@@ -52,7 +52,7 @@
 
             <!-- Header: avatar + title, mirroring trait-roll.js's avatar+dice row -->
             <div style="display: flex; align-items: center; gap: 12px;">
-              <img class="fantasy-whisper-avatar" src="${foundry.utils.escapeHTML(avatar)}" alt="Avatar de ${foundry.utils.escapeHTML(game.user.name)}" style="
+              <img class="fantasy-whisper-avatar" src="${foundry.utils.escapeHTML(avatar)}" alt="${foundry.utils.escapeHTML(t("common.avatar_of", { name: game.user.name }))}" style="
                 width: 64px;
                 height: 64px;
                 min-width: 64px;
@@ -71,7 +71,7 @@
                 letter-spacing: 0.5px;
                 text-transform: uppercase;
               ">
-                ✉️ Message privé
+                ${t("whisper.header")}
               </div>
             </div>
 
@@ -108,7 +108,7 @@
                         display: inline-block;
                         margin-top: 6px;
                       ">
-                Répondre
+                ${t("whisper.reply")}
               </button>
             </div>
           </div>
@@ -137,7 +137,7 @@
 
                 return true;
             }
-        }, { action: "cancel", label: "Annuler" }]
+        }, { action: "cancel", label: t("common.cancel") }]
     });
 
     dialog.render({ force: true });

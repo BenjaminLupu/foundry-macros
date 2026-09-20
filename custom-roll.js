@@ -53,7 +53,7 @@
 
   const jokerCellHtml = `
     <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
-      <img class="dice-picker-icon" data-faces="joker" src="${svgToDataUri(WILD_DIE_ICON_SVG)}" alt="Joker" title="Dé Joker" style="width:64px;height:64px;cursor:pointer;box-sizing:border-box;border-radius:6px;border:2px solid transparent;transition:border-color 0.15s ease, box-shadow 0.15s ease;" />
+      <img class="dice-picker-icon" data-faces="joker" src="${svgToDataUri(WILD_DIE_ICON_SVG)}" alt="${t("dice.wild_die")}" title="${t("dice.wild_die")}" style="width:64px;height:64px;cursor:pointer;box-sizing:border-box;border-radius:6px;border:2px solid transparent;transition:border-color 0.15s ease, box-shadow 0.15s ease;" />
       <div style="display:flex;align-items:center;gap:6px;">
         <button type="button" class="dice-picker-minus" data-faces="joker" style="line-height:1;padding:2px 8px;">−</button>
         <span class="dice-picker-count" data-faces="joker" style="min-width:1.5em;text-align:center;font-size:1.3rem;font-weight:bold;">0</span>
@@ -62,7 +62,7 @@
   `;
 
   const dialog = new foundry.applications.api.DialogV2({
-    window: { title: "Lancer personnalisé" },
+    window: { title: t("palette.title") },
     content: `
       <div style="width:520px;">
         <!-- Discreet hint shown while the Joker is active. Its height is always reserved
@@ -79,11 +79,11 @@
     buttons: [
       {
         action: "roll",
-        label: "Lancer",
+        label: t("palette.roll"),
         default: true,
         callback: async () => rollSelectedDice()
       },
-      { action: "cancel", label: "Annuler" }
+      { action: "cancel", label: t("common.cancel") }
     ]
   });
 
@@ -105,10 +105,10 @@
   // combined with several dice. So, the Joker can be added next to at most one other die,
   // and while it is active, selecting a die replaces the previously selected one.
   // Hint shown above the dice: explains why a die cannot be selected / the Joker is unavailable
-  const JOKER_ACTIVE_HINT = "Dé Joker actif : un seul dé peut être sélectionné.";
-  const JOKER_BLOCKED_HINT = "Plusieurs dés sélectionnés : le dé Joker ne peut pas être ajouté.";
+  const JOKER_ACTIVE_HINT = t("palette.hint_wild_die_active");
+  const JOKER_BLOCKED_HINT = t("palette.hint_wild_die_blocked");
   // Notification shown when the user clicks the blocked Joker anyway
-  const JOKER_BLOCKED_MESSAGE = "Le dé Joker se lance avec un seul dé. Retire des dés pour l'activer.";
+  const JOKER_BLOCKED_MESSAGE = t("palette.wild_die_blocked");
 
   const totalDice = () => DICE_SIZES.reduce((sum, faces) => sum + counts[faces], 0);
   const isJokerBlocked = () => !jokerEnabled && totalDice() >= 2;
@@ -191,7 +191,7 @@
     const combined = parts.join(" + ");
 
     if (!combined && !jokerEnabled) {
-      ui.notifications.warn("Choisis au moins un dé avant de lancer.");
+      ui.notifications.warn(t("palette.pick_a_die"));
       return false;
     }
 
@@ -233,7 +233,7 @@
       // trait-roll-*.js macros (difficulty 4 by default, the higher of the two dice is kept).
       ChatMessage.create({
         speaker: ChatMessage.getSpeaker({ user }),
-        content: `<p>Jet de trait (d${mainDiceTerms[0].faces}) : ${roll.total}</p>`,
+        content: `<p>${t("roll.trait_fallback", { die: mainDiceTerms[0].faces, total: roll.total })}</p>`,
         flags: {
           world: {
             traitRoll: {
@@ -249,7 +249,7 @@
       // (nothing is compared with a wild die), difficulty 0 by default (none), no raises.
       ChatMessage.create({
         speaker: ChatMessage.getSpeaker({ user }),
-        content: `<p>Jet : ${roll.total}</p>`,
+        content: `<p>${t("roll.free_fallback", { total: roll.total })}</p>`,
         flags: {
           world: {
             freeRoll: {

@@ -1,0 +1,67 @@
+{
+  "benny.everyone": "Vous gagnez tous un Jeton !",
+
+  "card.adjust": "Ajuster",
+  "card.details_free": "Difficulté {difficulty}",
+  "card.details_trait": "Difficulté {difficulty}, modificateur {modifier}",
+  "card.difficulty": "Difficulté",
+  "card.failure": "Échec",
+  "card.final_roll": "Jet définitif",
+  "card.modifier": "Modificateur",
+  "card.raises.one": "Et c'est {n} prouesse ! 🎉",
+  "card.raises.other": "Et c'est {n} prouesses ! 🎉",
+  "card.success": "Réussite",
+  "card.update_failed": "Impossible de modifier cette carte.",
+
+  "colorset.d10": "D10 violet pour SWADE",
+  "colorset.d12": "D12 bleu pour SWADE",
+  "colorset.d4": "D4 vert pour SWADE",
+  "colorset.d6": "D6 jaune pour SWADE",
+  "colorset.d8": "D8 rouge pour SWADE",
+  "colorset.wild_die": "D6 blanc pour le dé Joker SWADE",
+
+  "common.avatar_of": "Avatar de {name}",
+  "common.cancel": "Annuler",
+  "common.send": "Envoyer",
+
+  "dice.trait_die": "Dé de trait (d{faces})",
+  "dice.wild_die": "Dé Joker",
+
+  "install.done": "{count} macros installées/mises à jour.",
+  "install.refresh": "Rafraîchis la fenêtre de Foundry (F5) pour appliquer le script de démarrage de session mis à jour.",
+
+  "macro.custom_roll": "Lancer personnalisé",
+  "macro.private_message": "Message privé",
+  "macro.trait_roll": "Lancer 1d{die}+Joker",
+
+  "palette.hint_wild_die_active": "Dé Joker actif : un seul dé peut être sélectionné.",
+  "palette.hint_wild_die_blocked": "Plusieurs dés sélectionnés : le dé Joker ne peut pas être ajouté.",
+  "palette.pick_a_die": "Choisis au moins un dé avant de lancer.",
+  "palette.roll": "Lancer",
+  "palette.title": "Lancer personnalisé",
+  "palette.wild_die_blocked": "Le dé Joker se lance avec un seul dé. Retire des dés pour l'activer.",
+
+  "roll.free_fallback": "Jet : {total}",
+  "roll.trait_fallback": "Jet de trait (d{die}) : {total}",
+
+  "uninstall.done": "Nettoyage terminé pour {users} utilisateur(s) : {macros} macro(s) supprimée(s).",
+  "uninstall.intro": "Cette action va, pour TOUS les joueurs du monde (connectés ou non) :",
+  "uninstall.irreversible": "Cette action est irréversible. Continuer ?",
+  "uninstall.macros": "supprimer les macros installées par install-macros.js.",
+  "uninstall.refresh": "Rafraîchis la fenêtre de Foundry (F5) pour que la suppression de start-session prenne effet.",
+  "uninstall.slots": "retirer les emplacements {range} (et les anciens 11-15 s'ils traînent encore) de leur barre de raccourcis (le reste de leur barre n'est pas touché) ;",
+  "uninstall.title": "Nettoyage",
+
+  "whisper.author_not_found": "Auteur introuvable.",
+  "whisper.header": "✉️ Message privé",
+  "whisper.header_received": "📥 Réception message privé",
+  "whisper.header_reply": "📩 Réponse privée",
+  "whisper.header_sent": "📤 Envoi message privé",
+  "whisper.message": "Message :",
+  "whisper.none_active": "Aucun joueur actif.",
+  "whisper.recipient": "Destinataire :",
+  "whisper.reply": "Répondre",
+  "whisper.reply_title": "Répondre en privé à {name}",
+  "whisper.reply_title_gm": "Répondre en privé au {name}",
+  "whisper.send_title": "Envoyer un message privé"
+}

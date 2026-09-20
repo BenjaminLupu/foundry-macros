@@ -25,6 +25,8 @@
    now reuses an existing file instead of recreating one on every reinstall, so
    they no longer accumulate over time. */
 
+__I18N__
+
 // Technical identifiers of the macros currently installed by install-macros.js
 // (generated from the MACROS table in build/build.py, same source as install-macros.js)
 const INSTALLED_MACRO_KEYS = [
@@ -41,14 +43,14 @@ const LEGACY_SLOTS = [11, 12, 13, 14, 15];
 
 (async () => {
   const confirmed = await foundry.applications.api.DialogV2.confirm({
-    window: { title: "Nettoyage" },
+    window: { title: t("uninstall.title") },
     content: `
-      <p>Cette action va, pour TOUS les joueurs du monde (connectés ou non) :</p>
+      <p>${t("uninstall.intro")}</p>
       <ul>
-        <li>retirer les emplacements __SLOT_RANGE__ (et les anciens 11-15 s'ils traînent encore) de leur barre de raccourcis (le reste de leur barre n'est pas touché) ;</li>
-        <li>supprimer les macros installées par install-macros.js.</li>
+        <li>${t("uninstall.slots", { range: "__SLOT_RANGE__" })}</li>
+        <li>${t("uninstall.macros")}</li>
       </ul>
-      <p>Cette action est irréversible. Continuer ?</p>
+      <p>${t("uninstall.irreversible")}</p>
     `
   });
   if (!confirmed) return;
@@ -77,10 +79,8 @@ const LEGACY_SLOTS = [11, 12, 13, 14, 15];
   }
 
   ui.hotbar.render(true);
-  ui.notifications.info(
-    `Nettoyage terminé pour ${game.users.size} utilisateur(s) : ${deletedMacroCount} macro(s) supprimée(s).`
-  );
+  ui.notifications.info(t("uninstall.done", { users: game.users.size, macros: deletedMacroCount }));
   // start-session registers its hooks only once per session (game._whisperReplyHooked):
   // deleting the macro here does not remove hooks already active in the current session.
-  ui.notifications.warn("Rafraîchis la fenêtre de Foundry (F5) pour que la suppression de start-session prenne effet.");
+  ui.notifications.warn(t("uninstall.refresh"));
 })();

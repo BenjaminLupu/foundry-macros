@@ -28,6 +28,7 @@ if (!game._whisperReplyHooked) {
         // a CSS ":hover" rule. Applies to any private-message card (both the initial send and
         // any reply).
         html.querySelectorAll(".fantasy-whisper-reply-btn").forEach(btn => {
+            btn.textContent = t("whisper.reply");
             btn.addEventListener("mouseenter", () => {
                 btn.style.backgroundColor = "rgb(201, 89, 63)";
                 btn.style.borderColor = "rgb(231, 209, 177)";
@@ -47,10 +48,10 @@ if (!game._whisperReplyHooked) {
         if (headerEl) {
             if (message.author.id === game.user.id) {
                 // The logged-in user is the whisper's author
-                headerEl.innerHTML = "📤 Envoi message privé";
+                headerEl.innerHTML = t("whisper.header_sent");
             } else {
                 // The logged-in user is the whisper's recipient
-                headerEl.innerHTML = "📥 Réception message privé";
+                headerEl.innerHTML = t("whisper.header_received");
             }
         }
 
@@ -83,21 +84,20 @@ if (!game._whisperReplyHooked) {
             });
         }
 
-        // Helper that opens an input dialog and sends a whisper reply. "targetLabel" (e.g.
-        // "à Amandine" or "au Meneur de jeu") is already built by the caller and embedded in
-        // the dialog's title.
-        const replyFlow = async (targetIds, targetLabel) => {
+        // Helper that opens an input dialog and sends a whisper reply. "dialogTitle" (e.g.
+        // "Reply privately to Amandine") is already translated by the caller.
+        const replyFlow = async (targetIds, dialogTitle) => {
             const dlg = new foundry.applications.api.DialogV2({
-                window: { title: `Répondre en privé ${targetLabel}` },
+                window: { title: dialogTitle },
                 content: `
           <div class="form-group" style="width:600px;">
-            <label for="reply-text">Message :</label>
+            <label for="reply-text">${t("whisper.message")}</label>
             <textarea id="reply-text" rows="4" class="w-full" style="font-size:1.1rem;"></textarea>
           </div>
       `,
                 buttons: [{
                     action: "send",
-                    label: "Envoyer",
+                    label: t("common.send"),
                     default: true,
                     callback: (event, button) => {
                         const text = button.form.querySelector("#reply-text")?.value.trim();
@@ -130,7 +130,7 @@ if (!game._whisperReplyHooked) {
 
             <!-- Header: avatar + title, mirroring trait-roll.js's avatar+dice row -->
             <div style="display: flex; align-items: center; gap: 12px;">
-              <img class="fantasy-whisper-avatar" src="${foundry.utils.escapeHTML(avatar)}" alt="Avatar de ${foundry.utils.escapeHTML(game.user.name)}" style="
+              <img class="fantasy-whisper-avatar" src="${foundry.utils.escapeHTML(avatar)}" alt="${foundry.utils.escapeHTML(t("common.avatar_of", { name: game.user.name }))}" style="
                 width: 64px;
                 height: 64px;
                 min-width: 64px;
@@ -149,7 +149,7 @@ if (!game._whisperReplyHooked) {
                 letter-spacing: 0.5px;
                 text-transform: uppercase;
               ">
-                📩 Réponse privée
+                ${t("whisper.header_reply")}
               </div>
             </div>
 
@@ -186,7 +186,7 @@ if (!game._whisperReplyHooked) {
                         display: inline-block;
                         margin-top: 6px;
                       ">
-                Répondre
+                ${t("whisper.reply")}
               </button>
             </div>
           </div>
@@ -208,7 +208,7 @@ if (!game._whisperReplyHooked) {
                         });
                         return true;
                     }
-                }, { action: "cancel", label: "Annuler" }]
+                }, { action: "cancel", label: t("common.cancel") }]
             });
             dlg.render({ force: true });
         };
@@ -219,14 +219,14 @@ if (!game._whisperReplyHooked) {
                 const replyToFlag = message.getFlag("world", "whisperReply");
                 const authorId = replyToFlag?.replyTo ?? message.author.id;
                 const target = game.users.get(authorId);
-                if (!target) return ui.notifications.warn("Auteur introuvable.");
+                if (!target) return ui.notifications.warn(t("whisper.author_not_found"));
                 // The Gamemaster is always referred to by their assigned character (e.g.
                 // "Meneur de jeu"), never by their account name — same convention as the
                 // rest of this file.
-                const targetLabel = target.isGM
-                    ? `au ${target.character?.name || target.name}`
-                    : `à ${target.name}`;
-                await replyFlow([authorId], targetLabel);
+                const dialogTitle = target.isGM
+                    ? t("whisper.reply_title_gm", { name: target.character?.name || target.name })
+                    : t("whisper.reply_title", { name: target.name });
+                await replyFlow([authorId], dialogTitle);
             });
         });
 
@@ -384,9 +384,9 @@ if (!game._traitRollCardHooked) {
     // is clicked.
     const adjustZoneHtml = (settings, isFinal) => `
             <div class="trait-roll-adjust" style="border-top:1px solid rgba(139,94,60,0.4);padding-top:8px;display:flex;flex-direction:column;gap:6px;">
-                ${stepperRow("Modificateur", "modifier", formatModifier(settings.modifier), modifierColor(settings.modifier), settings.modifier > MODIFIER_MIN, settings.modifier < MODIFIER_MAX)}
-                ${stepperRow("Difficulté", "difficulty", String(settings.difficulty), "inherit", settings.difficulty > DIFFICULTY_MIN, true)}
-                <div style="display:flex;justify-content:center;">${applyButton(isFinal ? "Ajuster" : "Jet définitif")}</div>
+                ${stepperRow(t("card.modifier"), "modifier", formatModifier(settings.modifier), modifierColor(settings.modifier), settings.modifier > MODIFIER_MIN, settings.modifier < MODIFIER_MAX)}
+                ${stepperRow(t("card.difficulty"), "difficulty", String(settings.difficulty), "inherit", settings.difficulty > DIFFICULTY_MIN, true)}
+                <div style="display:flex;justify-content:center;">${applyButton(isFinal ? t("card.adjust") : t("card.final_roll"))}</div>
             </div>`;
 
     // The parchment card shared by every roll: the author's avatar and one line per die, the big
@@ -406,7 +406,7 @@ if (!game._traitRollCardHooked) {
                 color:#3b2f20;
             ">
                 <div class="trait-roll-dice" style="display:flex;align-items:center;gap:12px;">
-                    <img src="${foundry.utils.escapeHTML(author?.avatar ?? "icons/svg/mystery-man.svg")}" alt="Avatar de ${foundry.utils.escapeHTML(author?.name ?? "")}" style="width:64px;height:64px;border-radius:6px;border:1px solid #8b5e3c;object-fit:cover;" />
+                    <img src="${foundry.utils.escapeHTML(author?.avatar ?? "icons/svg/mystery-man.svg")}" alt="${foundry.utils.escapeHTML(t("common.avatar_of", { name: author?.name ?? "" }))}" style="width:64px;height:64px;border-radius:6px;border:1px solid #8b5e3c;object-fit:cover;" />
                     <div style="display:flex;flex-direction:column;gap:4px;">
                         ${diceRows}
                     </div>
@@ -453,7 +453,7 @@ if (!game._traitRollCardHooked) {
         const totalColor = (isFinal && !criticalFailure) ? (success ? COLOR_POSITIVE : COLOR_NEGATIVE) : undefined;
 
         const diceRows = data.dice.map(die =>
-            dieRowHtml(die, die.type === "wild" ? "Dé sauvage" : `Dé de trait (d${die.faces})`, formatDieLine(die, modifier))
+            dieRowHtml(die, die.type === "wild" ? t("dice.wild_die") : t("dice.trait_die", { faces: die.faces }), formatDieLine(die, modifier))
         ).join("");
 
         // Result, once final: Échec / Réussite against the difficulty, and one raise per full 4
@@ -463,12 +463,12 @@ if (!game._traitRollCardHooked) {
             const lines = [];
             if (!criticalFailure) {
                 const raises = success ? Math.floor((total - difficulty) / 4) : 0;
-                lines.push(`<div style="font-size:1.3rem;font-weight:bold;">${success ? "Réussite" : "Échec"}</div>`);
+                lines.push(`<div style="font-size:1.3rem;font-weight:bold;">${success ? t("card.success") : t("card.failure")}</div>`);
                 if (raises >= 1) {
-                    lines.push(`<div style="font-size:1.15rem;">Et c'est ${raises} ${raises > 1 ? "prouesses" : "prouesse"} ! 🎉</div>`);
+                    lines.push(`<div style="font-size:1.15rem;">${t("card.raises", { n: raises })}</div>`);
                 }
             }
-            lines.push(`<div style="font-size:0.85rem;opacity:0.7;">Difficulté ${difficulty}, modificateur ${formatModifier(modifier)}</div>`);
+            lines.push(`<div style="font-size:0.85rem;opacity:0.7;">${t("card.details_trait", { difficulty, modifier: formatModifier(modifier) })}</div>`);
             resultHtml = `<div class="trait-roll-result" style="text-align:center;">${lines.join("")}</div>`;
         }
 
@@ -489,7 +489,7 @@ if (!game._traitRollCardHooked) {
 
         // One line per die, without the modifier (it applies to the whole sum, not to each die)
         const diceRows = data.dice.map(die =>
-            dieRowHtml(die, die.type === "wild" ? "Joker" : `d${die.faces}`, formatDieLine(die, 0))
+            dieRowHtml(die, die.type === "wild" ? t("dice.wild_die") : `d${die.faces}`, formatDieLine(die, 0))
         ).join("");
 
         // The calculation of the total, under it, when there is a modifier: "11 + 2" (the "+ 2"
@@ -505,8 +505,8 @@ if (!game._traitRollCardHooked) {
             totalColor = total >= difficulty ? COLOR_POSITIVE : COLOR_NEGATIVE;
             resultHtml = `
                 <div class="trait-roll-result" style="text-align:center;">
-                    <div style="font-size:1.3rem;font-weight:bold;">${total >= difficulty ? "Réussite" : "Échec"}</div>
-                    <div style="font-size:0.85rem;opacity:0.7;">Difficulté ${difficulty}</div>
+                    <div style="font-size:1.3rem;font-weight:bold;">${total >= difficulty ? t("card.success") : t("card.failure")}</div>
+                    <div style="font-size:0.85rem;opacity:0.7;">${t("card.details_free", { difficulty })}</div>
                 </div>`;
         }
 
@@ -586,7 +586,7 @@ if (!game._traitRollCardHooked) {
                 pendingSettings.delete(message.id);
             } catch (error) {
                 console.error("Custom | Could not adjust the roll card", error);
-                ui.notifications.warn("Impossible de modifier cette carte.");
+                ui.notifications.warn(t("card.update_failed"));
             }
         });
     };
@@ -607,7 +607,7 @@ Hooks.once('diceSoNiceReady', (dice3d) => {
 
     dice3d.addColorset({
         name: 'basic-wild-die',
-        description: 'D6 blanc pour le dé joker SWADE',
+        description: t("colorset.wild_die"),
         category: 'Colors',
         foreground: ['#000000'],
         background: ['#EAF1F6'],
@@ -621,7 +621,7 @@ Hooks.once('diceSoNiceReady', (dice3d) => {
 
     dice3d.addColorset({
         name: 'basic-d4',
-        description: 'D4 vert pour SWADE',
+        description: t("colorset.d4"),
         category: 'Colors',
         foreground: ['#FFFFFF'],
         background: ['#297243'],
@@ -633,7 +633,7 @@ Hooks.once('diceSoNiceReady', (dice3d) => {
 
     dice3d.addColorset({
         name: 'basic-d6',
-        description: 'D6 jaune pour SWADE',
+        description: t("colorset.d6"),
         category: 'Colors',
         foreground: ['#000000'],
         background: ['#D4B42D'],
@@ -647,7 +647,7 @@ Hooks.once('diceSoNiceReady', (dice3d) => {
 
     dice3d.addColorset({
         name: 'basic-d8',
-        description: 'D8 rouge pour SWADE',
+        description: t("colorset.d8"),
         category: 'Colors',
         foreground: ['#FFFFFF'],
         background: ['#C50000'],
@@ -660,7 +660,7 @@ Hooks.once('diceSoNiceReady', (dice3d) => {
 
     dice3d.addColorset({
         name: 'basic-d10',
-        description: 'D10 violet pour SWADE',
+        description: t("colorset.d10"),
         category: 'Colors',
         foreground: ['#FFFFFF'],
         background: ['#4C4297'],
@@ -673,7 +673,7 @@ Hooks.once('diceSoNiceReady', (dice3d) => {
 
     dice3d.addColorset({
         name: 'basic-d12',
-        description: 'D12 bleu pour SWADE',
+        description: t("colorset.d12"),
         category: 'Colors',
         foreground: ['#FFFFFF'],
         background: ['#184285'],

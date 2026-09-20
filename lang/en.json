@@ -1,0 +1,67 @@
+{
+  "benny.everyone": "Everyone gets a Benny!",
+
+  "card.adjust": "Adjust",
+  "card.details_free": "Target Number {difficulty}",
+  "card.details_trait": "Target Number {difficulty}, modifier {modifier}",
+  "card.difficulty": "Target Number",
+  "card.failure": "Failure",
+  "card.final_roll": "Final roll",
+  "card.modifier": "Modifier",
+  "card.raises.one": "And that's {n} raise! 🎉",
+  "card.raises.other": "And that's {n} raises! 🎉",
+  "card.success": "Success",
+  "card.update_failed": "This card cannot be modified.",
+
+  "colorset.d10": "Purple d10 for SWADE",
+  "colorset.d12": "Blue d12 for SWADE",
+  "colorset.d4": "Green d4 for SWADE",
+  "colorset.d6": "Yellow d6 for SWADE",
+  "colorset.d8": "Red d8 for SWADE",
+  "colorset.wild_die": "White d6 for the SWADE Wild Die",
+
+  "common.avatar_of": "{name}'s avatar",
+  "common.cancel": "Cancel",
+  "common.send": "Send",
+
+  "dice.trait_die": "Trait die (d{faces})",
+  "dice.wild_die": "Wild Die",
+
+  "install.done": "{count} macros installed/updated.",
+  "install.refresh": "Refresh the Foundry window (F5) to apply the updated session start script.",
+
+  "macro.custom_roll": "Custom roll",
+  "macro.private_message": "Private message",
+  "macro.trait_roll": "Roll 1d{die} + Wild Die",
+
+  "palette.hint_wild_die_active": "Wild Die active: only one die can be selected.",
+  "palette.hint_wild_die_blocked": "Several dice selected: the Wild Die cannot be added.",
+  "palette.pick_a_die": "Pick at least one die before rolling.",
+  "palette.roll": "Roll",
+  "palette.title": "Custom roll",
+  "palette.wild_die_blocked": "The Wild Die is rolled with a single die. Remove dice to enable it.",
+
+  "roll.free_fallback": "Roll: {total}",
+  "roll.trait_fallback": "Trait roll (d{die}): {total}",
+
+  "uninstall.done": "Cleanup finished for {users} user(s): {macros} macro(s) deleted.",
+  "uninstall.intro": "This will, for ALL players in the world (connected or not):",
+  "uninstall.irreversible": "This cannot be undone. Continue?",
+  "uninstall.macros": "delete the macros installed by install-macros.js.",
+  "uninstall.refresh": "Refresh the Foundry window (F5) for the removal of start-session to take effect.",
+  "uninstall.slots": "remove slots {range} (and the old 11-15 if they are still around) from their hotbar (the rest of their hotbar is left alone);",
+  "uninstall.title": "Cleanup",
+
+  "whisper.author_not_found": "Author not found.",
+  "whisper.header": "✉️ Private message",
+  "whisper.header_received": "📥 Private message received",
+  "whisper.header_reply": "📩 Private reply",
+  "whisper.header_sent": "📤 Private message sent",
+  "whisper.message": "Message:",
+  "whisper.none_active": "No active player.",
+  "whisper.recipient": "Recipient:",
+  "whisper.reply": "Reply",
+  "whisper.reply_title": "Reply privately to {name}",
+  "whisper.reply_title_gm": "Reply privately to {name}",
+  "whisper.send_title": "Send a private message"
+}

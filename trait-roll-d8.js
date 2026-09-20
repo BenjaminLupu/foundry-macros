@@ -71,7 +71,7 @@
   // start-session.js is not active on a client.
   ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ user }),
-    content: `<p>Jet de trait (d${TRAIT_DIE_SIZE}) : ${roll.total}</p>`,
+    content: `<p>${t("roll.trait_fallback", { die: TRAIT_DIE_SIZE, total: roll.total })}</p>`,
     flags: {
       world: {
         traitRoll: {

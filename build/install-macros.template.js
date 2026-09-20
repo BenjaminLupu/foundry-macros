@@ -63,6 +63,8 @@
    Creating "script"-type macros requires being the Gamemaster (or having
    enabled the "Allow Players to Create Script Macros" setting). */
 
+__I18N__
+
 // Deterministic (non-random) hash of a string, used to derive a stable, unique
 // file name from the SVG's content.
 function hashString(str) {
@@ -141,8 +143,8 @@ __MACROS__
   }
 
   ui.hotbar.render(true);
-  ui.notifications.info(`${MACROS.length} macros installées/mises à jour.`);
+  ui.notifications.info(t("install.done", { count: MACROS.length }));
   if (needsRefresh) {
-    ui.notifications.warn("Rafraîchis la fenêtre de Foundry (F5) pour appliquer le script de démarrage de session mis à jour.");
+    ui.notifications.warn(t("install.refresh"));
   }
 })();
