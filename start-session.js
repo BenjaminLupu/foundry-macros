@@ -526,6 +526,9 @@ if (!game._traitRollCardHooked) {
     // entry remembers the applied values it started from and is dropped if they changed meanwhile.
     const pendingSettings = new Map();
 
+    // The values last applied to each message, as seen by this client (see renderRollCard).
+    const appliedSeen = new Map();
+
     // Draws the card of a message into its element, and wires up its buttons.
     const renderRollCard = (message, html, flagKey) => {
         const card = ROLL_CARDS[flagKey];
@@ -536,6 +539,23 @@ if (!game._traitRollCardHooked) {
         // The values applied to the card, and the values being set (the applied ones by default)
         const applied = { modifier: data.modifier ?? DEFAULT_MODIFIER, difficulty: data.difficulty ?? card.defaultDifficulty };
         const appliedKey = `${applied.modifier}|${applied.difficulty}|${data.final === true}`;
+
+        // When someone applies new values ("Jet définitif" / "Ajuster"), show the updated card again
+        // in the chat notifications. With the chat sidebar collapsed, the card of a message fades
+        // away a few seconds after it appeared, and an update does not bring it back by itself.
+        // The first time a client renders a message (a new message, or the page loading) is not an
+        // update: Foundry notifies new messages itself. Redrawing the card for the same values (the
+        // "-" / "+" buttons, the notification card itself) does not notify again, so there is no loop.
+        // The call is deferred so that this render is over, and skipped when Foundry would not show
+        // chat notifications anyway (chat open, or the setting turned off).
+        const previousKey = appliedSeen.get(message.id);
+        appliedSeen.set(message.id, appliedKey);
+        if (previousKey !== undefined && previousKey !== appliedKey) {
+            setTimeout(() => {
+                if (ui.chat?._shouldShowNotifications && !ui.chat._shouldShowNotifications()) return;
+                ui.chat?.notify?.(message, { newMessage: true });
+            }, 0);
+        }
         const pending = pendingSettings.get(message.id);
         const settings = pending?.appliedKey === appliedKey ? pending.settings : { ...applied };
 
