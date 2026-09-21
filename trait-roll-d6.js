@@ -43,6 +43,12 @@
   // If the Dice So Nice module is installed and active, play its 3D dice animation for
   // this roll before posting the result. Purely cosmetic — has no effect on the outcome.
   if (game.modules.get("dice-so-nice")?.active && game.dice3d) {
+    // A double 1 (both dice show 1, so the kept total is 1) is a critical failure: ask Dice So Nice
+    // for its "Dark" effect on both dice. It is done here, and not with a "total == 1" rule in the
+    // Dice So Nice settings, because such a rule also fires on other rolls that total 1 (the Benny
+    // die of the SWADE system, a free roll...).
+    if (roll.total === 1) roll.dice.forEach(die => { die.options.sfx = { specialEffect: "PlayAnimationDark" }; });
+
     await game.dice3d.showForRoll(
       roll,
       user,

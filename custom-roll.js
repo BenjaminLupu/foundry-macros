@@ -206,6 +206,11 @@
     const roll = await new Roll(formula).roll();
 
     if (game.modules.get("dice-so-nice")?.active && game.dice3d) {
+      // A double 1 on a trait roll (a Joker with one other die: both show 1, so the total is 1) is a
+      // critical failure: ask Dice So Nice for its "Dark" effect on both dice (see trait-roll-d8.js).
+      const isTraitRoll = jokerEnabled && Object.values(counts).reduce((sum, count) => sum + count, 0) === 1;
+      if (isTraitRoll && roll.total === 1) roll.dice.forEach(die => { die.options.sfx = { specialEffect: "PlayAnimationDark" }; });
+
       await game.dice3d.showForRoll(roll, user, true, null, false);
     }
 
