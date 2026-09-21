@@ -36,12 +36,14 @@
    filesystem: it cannot read trait-roll-d4.js or icons/d4-wild-die.svg from
    disk).
 
-   Hotbar slots: trait-roll-d4..d12 in 1-5, custom-roll in 6, private-message
-   in 7, start-session with no slot.
+   Hotbar slots: trait-roll-d4..d12 in 1-5, custom-roll in 6, spend-benny in 7,
+   private-message in 8, give-bennies-to-players in 9 (Game Masters only: the
+   players do not even see that macro), start-session with no slot.
 
    Icon assignment: d4-wild-die.svg etc. for trait-roll-* (trait die + wild
-   die), custom-roll.svg for custom-roll, private-message.svg for
-   private-message, none for start-session.
+   die), custom-roll.svg for custom-roll, spend-benny.svg, private-message.svg,
+   the icon given in the MACROS table for give-bennies-to-players, none for
+   start-session.
 
    Macro (hotbar) icon assignment technique: see Tests/test-svg-icon.js. A
    Foundry document's "img" field requires a file path with a valid extension
@@ -97,10 +99,13 @@ __MACROS__
 
   let needsRefresh = false;
 
-  for (const { name, macroKey, slot, command, icon, requiresRefresh } of MACROS) {
+  for (const { name, macroKey, slot, command, icon, requiresRefresh, gmOnly } of MACROS) {
     // ownership.default set to OBSERVER: gives every player the right to view/execute the
-    // macro, without granting the right to modify or delete it (reserved to OWNER).
-    const ownership = { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER };
+    // macro, without granting the right to modify or delete it (reserved to OWNER). A macro that is
+    // only for the Game Master (gmOnly) gets NONE: the players cannot even see it.
+    const ownership = {
+      default: gmOnly ? CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE : CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER
+    };
 
     // Looked up by technical identifier (flags.world.macroKey), not by "name" (the display
     // name, freely customizable and therefore not a reliable lookup key).
@@ -132,7 +137,9 @@ __MACROS__
       // Assign the macro to the same hotbar slot for EVERY user in the world, whether
       // connected or not (a GM is allowed to modify any player's User document, "active" or
       // not; game.users lists every account in the world, not just those currently online).
+      // A macro that is only for the Game Master is only assigned to the GMs.
       for (const user of game.users) {
+        if (gmOnly && !user.isGM) continue;
         await user.assignHotbarMacro(macro, slot);
       }
     }

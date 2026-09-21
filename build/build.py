@@ -50,6 +50,8 @@ BUILD = ROOT / "build"
 #   source    : script file, relative to the repository root
 #   icon      : SVG file in icons/ (None = no icon)
 #   refresh   : True if the Foundry window must be refreshed (F5) after an update
+#   gm_only   : (optional) True for a macro that only the Game Master gets: nobody else can see it
+#               (default ownership "none") and its hotbar slot is only assigned to the GMs
 MACROS = [
     {"key": "macro-1d4-joker", "name": ("macro.trait_roll", {"die": 4}), "slot": 1, "source": "trait-roll-d4.js", "icon": "d4-wild-die.svg", "refresh": False},
     {"key": "macro-1d6-joker", "name": ("macro.trait_roll", {"die": 6}), "slot": 2, "source": "trait-roll-d6.js", "icon": "d6-wild-die.svg", "refresh": False},
@@ -59,6 +61,7 @@ MACROS = [
     {"key": "custom-roll", "name": ("macro.custom_roll", {}), "slot": 6, "source": "custom-roll.js", "icon": "custom-roll.svg", "refresh": False},
     {"key": "macro-spend-benny", "name": ("macro.spend_benny", {}), "slot": 7, "source": "spend-benny.js", "icon": "spend-benny.svg", "refresh": False},
     {"key": "macro-private-message", "name": ("macro.private_message", {}), "slot": 8, "source": "private-message.js", "icon": "private-message.svg", "refresh": False},
+    {"key": "macro-give-bennies-to-players", "name": ("macro.give_bennies", {}), "slot": 9, "source": "give-bennies-to-players.js", "icon": "gives-bennies-to-players.svg", "refresh": False, "gm_only": True},
     {"key": "macro-session-start", "name": "start-session", "slot": None, "source": "start-session.js", "icon": None, "refresh": True},
 ]
 
@@ -181,7 +184,8 @@ def macros_block():
         slot = "null" if m["slot"] is None else str(m["slot"])
         lines.append(
             f'  {{ name: {name_expression(m["name"])}, macroKey: {js_string(m["key"])}, slot: {slot}, '
-            f'command: {js_string(command)}, icon: {icon}, requiresRefresh: {"true" if m["refresh"] else "false"} }},'
+            f'command: {js_string(command)}, icon: {icon}, requiresRefresh: {"true" if m["refresh"] else "false"}, '
+            f'gmOnly: {"true" if m.get("gm_only") else "false"} }},'
         )
     return "\n".join(lines)
 
@@ -203,14 +207,18 @@ def render(template_name):
     text = read_text(BUILD / template_name)
     # The translations the template itself uses, plus the macro names (installer only)
     keys = used_keys(text) | (name_keys() if "__MACROS__" in text else set())
-    slots = [m["slot"] for m in MACROS if m["slot"] is not None]
+    # Hotbar slots given to everybody, and slots that only the GMs get (gm_only macros)
+    everyone_slots = [m["slot"] for m in MACROS if m["slot"] is not None and not m.get("gm_only")]
+    gm_slots = [m["slot"] for m in MACROS if m["slot"] is not None and m.get("gm_only")]
     replacements = {
         "__I18N__": i18n_prelude(keys).rstrip("\n"),
         "__MACROS__": macros_block(),
         "__INSTALLED_MACRO_KEYS__": wrap_keys([m["key"] for m in MACROS]),
-        "__INSTALLED_SLOTS__": ", ".join(str(m["slot"]) for m in MACROS if m["slot"] is not None),
+        "__INSTALLED_SLOTS__": ", ".join(str(slot) for slot in everyone_slots),
+        "__GM_ONLY_SLOTS__": ", ".join(str(slot) for slot in gm_slots),
         "__MACRO_COUNT__": str(len(MACROS)),
-        "__SLOT_RANGE__": f"{min(slots)}-{max(slots)}",
+        "__SLOT_RANGE__": f"{min(everyone_slots)}-{max(everyone_slots)}",
+        "__GM_SLOT_RANGE__": (f"{min(gm_slots)}-{max(gm_slots)}" if len(gm_slots) > 1 else str(gm_slots[0])) if gm_slots else "",
     }
     for placeholder, value in replacements.items():
         text = text.replace(placeholder, value)
@@ -290,7 +298,7 @@ def i18n_problems():
     return errors, warnings
 
 
-# Sources that embed a copy of the die icons (a Foundry macro cannot read icons/*.svg).
+# Sources that embed a copy of the icons (a Foundry macro cannot read icons/*.svg).
 # They must stay identical to icons/*.svg: this is checked on every run, so a swapped or
 # outdated icon is reported instead of silently shipped.
 ICON_SOURCES = ["custom-roll.js", "start-session.js"]
@@ -315,6 +323,9 @@ def icon_problems():
         wild = re.search(r"WILD_DIE_ICON_SVG = `(<svg.*?</svg>)`", text, re.S)
         if not wild or wild.group(1) != svg_body("wild-die"):
             problems.append(f"{source}: l'icône du dé sauvage n'est pas celle de icons/wild-die.svg")
+    select_all = re.search(r"SELECT_ALL_ICON_SVG = `(<svg.*?</svg>)`", read_text(ROOT / "give-bennies-to-players.js"), re.S)
+    if not select_all or select_all.group(1) != svg_body("select-all-characters"):
+        problems.append("give-bennies-to-players.js: l'icône « Tous » n'est pas celle de icons/select-all-characters.svg")
     return problems
 
 

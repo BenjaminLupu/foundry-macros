@@ -4,7 +4,8 @@
 
    Macro: cleans up everything install-macros.js installs.
    - Removes hotbar slots __SLOT_RANGE__ from EVERY user in the world (whether currently
-     connected or not), without touching the rest of their personal hotbar
+     connected or not), without touching the rest of their personal hotbar; the slots
+     that only the Game Masters get (__GM_SLOT_RANGE__) are only removed from the GMs
    - Deletes the __MACRO_COUNT__ macros installed by install-macros.js: the 5 trait-roll-*
      macros, custom-roll, private-message, and start-session (start-session has
      no hotbar slot to remove — only its Macro document gets deleted)
@@ -36,6 +37,10 @@ __INSTALLED_MACRO_KEYS__
 // Hotbar slots used by install-macros.js (generated, same source)
 const INSTALLED_SLOTS = [__INSTALLED_SLOTS__];
 
+// Hotbar slots that only the Game Masters get (install-macros.js gives them to the GMs only): they are
+// cleared for the GMs only, so that what a player put in that slot is never touched.
+const GM_ONLY_SLOTS = [__GM_ONLY_SLOTS__];
+
 // Old simple-roll-* macros (replaced by the custom-roll palette): install-macros.js
 // no longer installs these, but we clean them up here one last time if they're still around.
 const LEGACY_MACRO_KEYS = ["macro-1d4", "macro-1d6", "macro-1d8", "macro-1d10", "macro-1d12"];
@@ -48,6 +53,7 @@ const LEGACY_SLOTS = [11, 12, 13, 14, 15];
       <p>${t("uninstall.intro")}</p>
       <ul>
         <li>${t("uninstall.slots", { range: "__SLOT_RANGE__" })}</li>
+        <li>${t("uninstall.gm_slots", { range: "__GM_SLOT_RANGE__" })}</li>
         <li>${t("uninstall.macros")}</li>
       </ul>
       <p>${t("uninstall.irreversible")}</p>
@@ -59,8 +65,8 @@ const LEGACY_SLOTS = [11, 12, 13, 14, 15];
   // Rebuild each user's hotbar without the installed slots, then replace the whole field
   // ("recursive: false"): the "hotbar.-=N" deletion syntax is rejected by the hotbar field's
   // validator on this version of Foundry.
-  const slotsToClear = [...INSTALLED_SLOTS, ...LEGACY_SLOTS];
   for (const user of game.users) {
+    const slotsToClear = [...INSTALLED_SLOTS, ...LEGACY_SLOTS, ...(user.isGM ? GM_ONLY_SLOTS : [])];
     const filteredHotbar = Object.fromEntries(
       Object.entries(user.hotbar).filter(([slot]) => !slotsToClear.includes(Number(slot)))
     );

@@ -268,6 +268,10 @@ if (!game._whisperReplyHooked) {
 //   name       : who spent it (the assigned character, or the GM's account name)
 //   avatar     : the image shown on the card
 //   remaining  : the number of Bennies left, shown in small text under the message (optional)
+//
+// flags.world.bennyGiveCard: Bennies given by the GM (posted by give-bennies-to-players.js)
+//   name       : the GM (assigned character, or account name)
+//   recipients : [{ name, avatar }] the characters who got a Benny
 // ---------------------------------------------------------------------------------------------
 if (!game._traitRollCardHooked) {
 
@@ -670,7 +674,41 @@ if (!game._traitRollCardHooked) {
                 ${Number.isInteger(data.remaining) ? `<div class="benny-remaining" style="width:100%;text-align:center;font-size:0.85rem;opacity:0.7;${bennyRemainingStyle(data.remaining)}">${foundry.utils.escapeHTML(t("benny.remaining", { n: data.remaining }))}</div>` : ""}
             </div>`;
 
+    // Bennies given by the GM (flags.world.bennyGiveCard): the same parchment card, "X gives a Benny to:"
+    // in the language of the reader, then the avatar and the name of every character who got one,
+    // centered and wrapping. The text is escaped before it goes into the HTML.
+    const buildBennyGiveCard = (data) => `
+            <div class="swade-chat-message benny-give-card" style="
+                display:flex;
+                flex-direction:column;
+                gap:10px;
+                background:linear-gradient(145deg,#f6ecd7,#e6d8b3);
+                border:2px solid #8b5e3c;
+                border-radius:12px;
+                padding:12px;
+                box-shadow:2px 2px 6px rgba(0,0,0,0.3);
+                font-family: 'Garamond', 'Palatino Linotype', serif;
+                color:#3b2f20;
+            ">
+                <div style="text-align:center;font-size:1.3rem;font-weight:bold;color:#5b3a1e;overflow-wrap:anywhere;">${foundry.utils.escapeHTML(t("give.given", { name: data.name }))}</div>
+                <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
+                    ${data.recipients.map(recipient => `
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:80px;">
+                        <img src="${foundry.utils.escapeHTML(recipient.avatar ?? "icons/svg/mystery-man.svg")}" alt="${foundry.utils.escapeHTML(t("common.avatar_of", { name: recipient.name }))}" style="width:56px;height:56px;border-radius:6px;border:1px solid #8b5e3c;object-fit:cover;" />
+                        <div style="font-size:0.95rem;text-align:center;overflow-wrap:anywhere;line-height:1.15;">${foundry.utils.escapeHTML(recipient.name)}</div>
+                    </div>`).join("")}
+                </div>
+            </div>`;
+
     Hooks.on("renderChatMessageHTML", (message, html) => {
+        // Bennies given by the GM (give-bennies-to-players.js)
+        const given = message.getFlag("world", "bennyGiveCard");
+        if (given?.recipients?.length) {
+            const contentEl = html.querySelector(".message-content");
+            if (contentEl) contentEl.innerHTML = buildBennyGiveCard(given);
+            return;
+        }
+
         // A Benny spent (spend-benny.js)
         const benny = message.getFlag("world", "bennyCard");
         if (benny?.name) {
