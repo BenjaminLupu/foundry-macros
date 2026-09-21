@@ -456,9 +456,16 @@ if (!game._traitRollCardHooked) {
     // clicked (flags.world.traitRoll.final), the card shows the raw roll: the dice, the best die as
     // the total (and the skull on a double 1), with no modifier, no result and no color. "canAdjust"
     // (author of the roll, or GM) decides whether the controls are shown, with "settings", the
-    // values being set.
+    // values being set. A double 1 (critical failure) is never adjustable: the card is only the dice
+    // and the skull, with no modifier, difficulty, result or button.
     const buildTraitRollCard = (message, data, canAdjust, settings) => {
-        const isFinal = data.final === true;
+        // Critical failure: the trait die and the wild die both show 1 on their first roll. It
+        // depends on the dice only, so it shows at once and whatever the modifier: the skull
+        // replaces the total, and nothing can be adjusted (a card that had already been made final
+        // before this rule is shown as a raw roll too).
+        const criticalFailure = data.dice.every(die => die.results[0] === 1);
+
+        const isFinal = data.final === true && !criticalFailure;
         const modifier = isFinal ? (data.modifier ?? DEFAULT_MODIFIER) : 0;
         const difficulty = data.difficulty ?? DEFAULT_TRAIT_DIFFICULTY;
 
@@ -466,37 +473,31 @@ if (!game._traitRollCardHooked) {
         // die is never below 1 (dieResult).
         const total = Math.max(...data.dice.map(die => dieResult(die, modifier)));
 
-        // Critical failure: the trait die and the wild die both show 1 on their first roll. It
-        // depends on the dice only, so it shows at once and whatever the modifier: the skull
-        // replaces the total.
-        const criticalFailure = data.dice.every(die => die.results[0] === 1);
         const totalDisplay = criticalFailure ? "💀" : formatNumber(total);
 
         // Once final, the total is green on a success and red on a failure (the skull keeps its own look)
         const success = total >= difficulty;
-        const totalColor = (isFinal && !criticalFailure) ? (success ? COLOR_POSITIVE : COLOR_NEGATIVE) : undefined;
+        const totalColor = isFinal ? (success ? COLOR_POSITIVE : COLOR_NEGATIVE) : undefined;
 
         const diceRows = data.dice.map(die =>
             dieRowHtml(die, die.type === "wild" ? t("dice.wild_die") : t("dice.trait_die", { faces: die.faces }), formatDieLine(die, modifier))
         ).join("");
 
         // Result, once final: Échec / Réussite against the difficulty, and one raise per full 4
-        // points above it. Nothing about the result on a critical failure.
+        // points above it (never final on a critical failure)
         let resultHtml = "";
         if (isFinal) {
             const lines = [];
-            if (!criticalFailure) {
-                const raises = success ? Math.floor((total - difficulty) / 4) : 0;
-                lines.push(`<div style="font-size:1.3rem;font-weight:bold;">${success ? t("card.success") : t("card.failure")}</div>`);
-                if (raises >= 1) {
-                    lines.push(`<div style="font-size:1.15rem;">${t("card.raises", { n: raises })}</div>`);
-                }
+            const raises = success ? Math.floor((total - difficulty) / 4) : 0;
+            lines.push(`<div style="font-size:1.3rem;font-weight:bold;">${success ? t("card.success") : t("card.failure")}</div>`);
+            if (raises >= 1) {
+                lines.push(`<div style="font-size:1.15rem;">${t("card.raises", { n: raises })}</div>`);
             }
             lines.push(`<div style="font-size:0.85rem;opacity:0.7;">${t("card.details_trait", { difficulty, modifier: formatModifier(modifier) })}</div>`);
             resultHtml = `<div class="trait-roll-result" style="text-align:center;">${lines.join("")}</div>`;
         }
 
-        return cardHtml(message.author, diceRows, totalDisplay, totalColor, resultHtml + (canAdjust ? adjustZoneHtml(settings, isFinal) : ""));
+        return cardHtml(message.author, diceRows, totalDisplay, totalColor, resultHtml + (canAdjust && !criticalFailure ? adjustZoneHtml(settings, isFinal) : ""));
     };
 
     // Free roll card (flags.world.freeRoll): any palette roll that is not a trait roll. Every die
