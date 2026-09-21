@@ -62,6 +62,10 @@
    URI embedded directly in an <img> tag, since an inline <svg> there gets
    stripped by the HTML sanitizer Foundry applies to chat message content.
 
+   Sounds: the files listed in SOUNDS of build/build.py (folder sounds/) are embedded below in
+   base64 and written as real files in worlds/<world>/macro-sounds/ (same technique as the icons,
+   an existing file with the same name is reused), so that start-session.js can play them.
+
    Creating "script"-type macros requires being the Gamemaster (or having
    enabled the "Allow Players to Create Script Macros" setting). */
 
@@ -96,6 +100,26 @@ __MACROS__
   // List existing files once, to avoid re-uploading an icon that was already written
   // during a previous run.
   const existingFiles = new Set((await FilePickerImpl.browse("data", targetDir).catch(() => null))?.files ?? []);
+
+  // Sounds: written once as real files in the world's data (a script cannot delete them afterwards)
+  const SOUNDS = [
+__SOUNDS__
+  ];
+  if (SOUNDS.length) {
+    const soundsDir = `worlds/${game.world.id}/macro-sounds`;
+    try {
+      await FilePickerImpl.createDirectory("data", soundsDir);
+    } catch (_e) {
+      // Folder already exists: nothing to do
+    }
+    const existingSounds = new Set((await FilePickerImpl.browse("data", soundsDir).catch(() => null))?.files ?? []);
+    for (const { name, base64 } of SOUNDS) {
+      if ([...existingSounds].some(path => path.endsWith(`/${name}`))) continue;
+      const bytes = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
+      const response = await FilePickerImpl.upload("data", soundsDir, new File([bytes], name, { type: "audio/mpeg" }), {});
+      if (!response?.path) console.warn(`Custom | Failed to upload the sound "${name}" (insufficient permissions?).`);
+    }
+  }
 
   let needsRefresh = false;
 

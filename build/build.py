@@ -29,6 +29,7 @@ from a language is a warning (English is used).
 
     python build/build.py --dump DIR   # write what is installed for each macro in DIR (tests)
 """
+import base64
 import json
 import re
 import sys
@@ -52,6 +53,11 @@ BUILD = ROOT / "build"
 #   refresh   : True if the Foundry window must be refreshed (F5) after an update
 #   gm_only   : (optional) True for a macro that only the Game Master gets: nobody else can see it
 #               (default ownership "none") and its hotbar slot is only assigned to the GMs
+# Sound files (in sounds/) that install-macros.js embeds and uploads to the world's data, in
+# worlds/<world>/macro-sounds/ (start-session.js plays them). An empty list = no sound is uploaded.
+# A script cannot delete a file that was already uploaded: remove it by hand if needed.
+SOUNDS = ["lucky-coin.mp3"]
+
 MACROS = [
     {"key": "macro-1d4-joker", "name": ("macro.trait_roll", {"die": 4}), "slot": 1, "source": "trait-roll-d4.js", "icon": "d4-wild-die.svg", "refresh": False},
     {"key": "macro-1d6-joker", "name": ("macro.trait_roll", {"die": 6}), "slot": 2, "source": "trait-roll-d6.js", "icon": "d6-wild-die.svg", "refresh": False},
@@ -190,6 +196,15 @@ def macros_block():
     return "\n".join(lines)
 
 
+def sounds_block():
+    """The sound files embedded in the installer: { name, base64 } entries."""
+    lines = []
+    for name in SOUNDS:
+        data = base64.b64encode((ROOT / "sounds" / name).read_bytes()).decode("ascii")
+        lines.append(f'  {{ name: {js_string(name)}, base64: "{data}" }},')
+    return "\n".join(lines)
+
+
 def wrap_keys(keys, width=100):
     """Quoted keys separated by commas, wrapped on 2-space indented lines."""
     lines, current = [], "  "
@@ -213,6 +228,7 @@ def render(template_name):
     replacements = {
         "__I18N__": i18n_prelude(keys).rstrip("\n"),
         "__MACROS__": macros_block(),
+        "__SOUNDS__": sounds_block(),
         "__INSTALLED_MACRO_KEYS__": wrap_keys([m["key"] for m in MACROS]),
         "__INSTALLED_SLOTS__": ", ".join(str(slot) for slot in everyone_slots),
         "__GM_ONLY_SLOTS__": ", ".join(str(slot) for slot in gm_slots),
