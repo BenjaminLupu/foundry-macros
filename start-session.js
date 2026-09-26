@@ -725,16 +725,40 @@ if (!game._traitRollCardHooked) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// SOUND FILES
+// The sounds of the blocks below are files uploaded by install-macros.js (SOUNDS in build/build.py,
+// folder sounds/) in worlds/<world>/macro-sounds/. A script cannot delete a file that was already
+// uploaded: to take a sound out, remove it by hand from that folder.
+// ---------------------------------------------------------------------------------------------
+const soundsDir = `worlds/${game.world.id}/macro-sounds`;
+const soundPaths = new Map();   // file name -> path as the file browser lists it (found once)
+
+// The path of a sound file: the one the file browser lists (a hosting service may change it),
+// otherwise the plain path
+const findSoundPath = async (file) => {
+    if (soundPaths.has(file)) return soundPaths.get(file);
+    try {
+        const listing = await foundry.applications.apps.FilePicker.implementation.browse("data", soundsDir);
+        const found = listing?.files?.find(path => path.endsWith(`/${file}`));
+        if (found) {
+            soundPaths.set(file, found);
+            return found;
+        }
+    } catch (_e) {
+        // No right to browse the files: use the plain path below
+    }
+    return `${soundsDir}/${file}`;
+};
+
+// ---------------------------------------------------------------------------------------------
 // LUCKY COIN SOUND (a test)
 // A short sound, for everybody, when a character gains a Benny. The SWADE system calls the hook
 // "swadeGetBenny" on the client that runs Actor#getBenny() (the GM: give-bennies-to-players.js, the
 // Jokers, the character sheet...): the sound is played there and pushed to the other clients
 // (AudioHelper.play with the socket option), so everybody hears it at the same time. It goes
 // through the "interface" volume of each client.
-// The file is uploaded by install-macros.js (SOUNDS in build/build.py, folder sounds/).
-// To take it out: set LUCKY_COIN_SOUND to false (no more sound), and empty SOUNDS in build/build.py
-// (the installer stops uploading the file). A script cannot delete a file that was already
-// uploaded: remove worlds/<world>/macro-sounds/lucky-coin.mp3 by hand.
+// To take it out: set LUCKY_COIN_SOUND to false (no more sound), and remove "lucky-coin.mp3" from
+// SOUNDS in build/build.py (the installer stops uploading the file).
 // ---------------------------------------------------------------------------------------------
 if (!game._luckyCoinHooked) {
 
@@ -747,21 +771,7 @@ if (!game._luckyCoinHooked) {
     // the sound, the ones that follow within this delay stay silent
     const LUCKY_COIN_COOLDOWN_MS = 2000;
 
-    const soundsDir = `worlds/${game.world.id}/macro-sounds`;
-    let soundPath = null;   // the path as the file browser lists it (a hosting service may change it)
     let lastPlayed = 0;
-
-    // The path of the sound file: the one the file browser lists (found once), otherwise the plain path
-    const findSoundPath = async () => {
-        if (soundPath) return soundPath;
-        try {
-            const listing = await foundry.applications.apps.FilePicker.implementation.browse("data", soundsDir);
-            soundPath = listing?.files?.find(path => path.endsWith(`/${LUCKY_COIN_FILE}`)) ?? null;
-        } catch (_e) {
-            // No right to browse the files: use the plain path below
-        }
-        return soundPath ?? `${soundsDir}/${LUCKY_COIN_FILE}`;
-    };
 
     Hooks.on("swadeGetBenny", async (actor) => {
         if (!LUCKY_COIN_SOUND || actor?.type !== "character") return;
@@ -769,9 +779,40 @@ if (!game._luckyCoinHooked) {
         if (now - lastPlayed < LUCKY_COIN_COOLDOWN_MS) return;
         lastPlayed = now;
         try {
-            await foundry.audio.AudioHelper.play({ src: await findSoundPath(), volume: LUCKY_COIN_VOLUME, loop: false, channel: "interface" }, true);
+            await foundry.audio.AudioHelper.play({ src: await findSoundPath(LUCKY_COIN_FILE), volume: LUCKY_COIN_VOLUME, loop: false, channel: "interface" }, true);
         } catch (error) {
             console.warn("Custom | Could not play the lucky coin sound", error);
+        }
+    });
+}
+
+// ---------------------------------------------------------------------------------------------
+// PRIVATE MESSAGE SOUND
+// A short sound, for the recipient only, when a private message arrives (the ones of
+// private-message.js and the replies, which carry the flag flags.world.whisperReply). Each client
+// decides for itself when Foundry tells it that a message was created: nothing is pushed to the
+// other clients, so the sender hears nothing, nor does anybody else. The message history loaded
+// with the page does not play it (only new messages trigger the hook).
+// To take it out: set PRIVATE_MESSAGE_SOUND to false (no more sound), and remove "whisper.mp3" from
+// SOUNDS in build/build.py (the installer stops uploading the file).
+// ---------------------------------------------------------------------------------------------
+if (!game._privateMessageSoundHooked) {
+
+    game._privateMessageSoundHooked = true;
+
+    const PRIVATE_MESSAGE_SOUND = true;
+    const PRIVATE_MESSAGE_SOUND_FILE = "whisper.mp3";
+    const PRIVATE_MESSAGE_SOUND_VOLUME = 0.8;
+
+    Hooks.on("createChatMessage", async (message, _options, userId) => {
+        if (!PRIVATE_MESSAGE_SOUND) return;
+        if (userId === game.user.id) return;                                   // written on this client: the sender
+        if (!message.getFlag("world", "whisperReply")) return;                 // not a private message of ours
+        if (!message.whisper?.includes(game.user.id)) return;                  // not addressed to this user
+        try {
+            await foundry.audio.AudioHelper.play({ src: await findSoundPath(PRIVATE_MESSAGE_SOUND_FILE), volume: PRIVATE_MESSAGE_SOUND_VOLUME, loop: false, channel: "interface" }, false);
+        } catch (error) {
+            console.warn("Custom | Could not play the private message sound", error);
         }
     });
 }

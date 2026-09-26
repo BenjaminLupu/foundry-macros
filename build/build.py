@@ -56,7 +56,7 @@ BUILD = ROOT / "build"
 # Sound files (in sounds/) that install-macros.js embeds and uploads to the world's data, in
 # worlds/<world>/macro-sounds/ (start-session.js plays them). An empty list = no sound is uploaded.
 # A script cannot delete a file that was already uploaded: remove it by hand if needed.
-SOUNDS = ["lucky-coin.mp3"]
+SOUNDS = ["lucky-coin.mp3", "whisper.mp3"]
 
 MACROS = [
     {"key": "macro-1d4-joker", "name": ("macro.trait_roll", {"die": 4}), "slot": 1, "source": "trait-roll-d4.js", "icon": "d4-wild-die.svg", "refresh": False},
