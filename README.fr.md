@@ -151,6 +151,8 @@ programmation d'Anthropic, et testées par l'auteur dans Foundry.
 
 ## Pour les développeurs
 
+Comment tout cela fonctionne, et les choix qui le sous-tendent : voir le **[guide du développeur](docs/DEVELOPERS.fr.md)**.
+
 `install-macros.js` et `uninstall-macros.js` sont **générés** : ne les modifie pas à la main.
 
 | Dossier ou fichier | Rôle |

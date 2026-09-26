@@ -148,6 +148,8 @@ coding assistant, and tested by the author in Foundry.
 
 ## For developers
 
+How it all works, and the choices behind it: see the **[developer guide](docs/DEVELOPERS.md)**.
+
 `install-macros.js` and `uninstall-macros.js` are **generated**: do not edit them by hand.
 
 | Folder or file | What it is |
