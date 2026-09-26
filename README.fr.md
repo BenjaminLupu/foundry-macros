@@ -58,6 +58,8 @@ les utilisateurs du monde, connectés ou non :
 | 9 | Distribuer des jetons | Meneur de jeu seulement |
 | | `start-session` (sans emplacement) | Lancée au démarrage |
 
+<p align="center"><img src="screenshots/foundry-hotbar.png" alt="La barre de raccourcis après l'installation : les cinq jets de trait, la palette, Dépenser un jeton, Message privé et, pour le MJ, Distribuer des jetons." width="520"></p>
+
 Tu peux relancer `install-macros.js` à tout moment pour mettre les macros à jour : il ne renomme jamais une
 macro que tu as renommée. Pour tout retirer, exécute [`uninstall-macros.js`](uninstall-macros.js).
 Rafraîchis la page (F5) après chaque installation.
@@ -68,16 +70,22 @@ Rafraîchis la page (F5) après chaque installation.
 
 ## Les macros
 
+> Les captures d'écran montrent l'interface en français ; les cartes et les fenêtres suivent la langue de chaque joueur.
+
 ### Jets de trait (d4 à d12)
 
 Un clic lance un **dé de trait** et le **dé Joker** (un d6), tous deux explosifs, et garde le meilleur. Le
 résultat est une carte de tchat avec une ligne par dé (un dé qui explose s'affiche `8💥 + 3 = 11`).
+
+<p align="center"><img src="screenshots/trait-roll.png" alt="Un jet de trait : la carte telle qu'elle apparaît, avant le jet définitif" width="700"></p>
 
 Sous le total, la personne qui a lancé (et le MJ) peut régler un **Modificateur** (−6 à +6) et une
 **Difficulté** (4 par défaut) avec les boutons − et +, puis cliquer sur **Jet définitif**. La carte montre
 alors les dés modifiés, **Réussite** ou **Échec** (en vert ou en rouge), et une **prouesse** par tranche
 complète de 4 points au-dessus de la difficulté. Le bouton devient **Ajuster**, pour modifier de nouveau
 les valeurs.
+
+<p align="center"><img src="screenshots/roll-adjustments.png" alt="La carte après Jet définitif : dés modifiés, résultat, prouesse et bouton Ajuster" width="300"></p>
 
 - Un dé ne descend jamais sous 1, quel que soit le modificateur (`5 − 6 → 1`).
 - **Double 1** : si les deux dés montrent 1, le total est remplacé par un 💀 (échec critique). La carte ne
@@ -94,11 +102,15 @@ d12), et éventuellement le **dé Joker**.
   additionnés, le modificateur est ajouté une seule fois, et la difficulté est 0 par défaut (aucun
   résultat affiché tant que tu n'en fixes pas une).
 
+<p align="center"><img src="screenshots/dice-palette.png" alt="La palette de dés" width="600"></p>
+
 ### Message privé
 
 Envoie un message privé à un autre joueur connecté (ou au MJ). Il arrive sous forme de carte avec un bouton
 **Répondre**. Le curseur va directement dans le champ de texte, pour écrire comme pour répondre. Le
 destinataire, et lui seul, entend un court son.
+
+<p align="center"><img src="screenshots/get-private-message.png" alt="Un message privé reçu, avec son bouton Répondre" width="330"> <img src="screenshots/reply-private-message.png" alt="La fenêtre de réponse" width="560"></p>
 
 ### Dépenser un jeton
 
@@ -106,6 +118,8 @@ Un clic dépense un jeton de ton personnage assigné (le MJ dépense ses propres
 le compte des jetons, l'animation Dice So Nice et les règles SWADE sont gérés par le système. Une carte
 indique à tout le monde qui en a dépensé un et **combien de jetons il reste**, en gras quand il en reste un
 et en rouge quand il n'en reste plus.
+
+<p align="center"><img src="screenshots/spend-benny.png" alt="Un jeton dépensé, avec le nombre de jetons restants" width="600"></p>
 
 Si tu es **propriétaire de plusieurs personnages**, une petite fenêtre te demande lequel dépense le jeton
 (un personnage sans jeton est grisé ; ton personnage assigné est choisi par défaut).
@@ -115,6 +129,8 @@ Si tu es **propriétaire de plusieurs personnages**, une petite fenêtre te dema
 Une fenêtre avec les avatars des personnages des **joueurs connectés**. Clique les personnages qui reçoivent
 un jeton, clique le nom d'un joueur pour choisir tous ses personnages, ou clique **Tous**, puis
 **Distribuer**. Chaque personnage choisi reçoit un jeton, et une carte de tchat indique qui en a reçu un.
+
+<p align="center"><img src="screenshots/give-benny.png" alt="Distribuer des jetons : les personnages à choisir et la case Tous" width="560"></p>
 
 Les personnages proposés sont ceux dont un joueur connecté est **propriétaire** (un joueur peut en posséder
 plusieurs). Donne aux joueurs la permission *Propriétaire* sur leurs personnages dans Foundry.

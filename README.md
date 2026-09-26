@@ -57,6 +57,8 @@ user of the world, connected or not:
 | 9 | Give Bennies to players | Game Master only |
 | | `start-session` (no slot) | Runs at startup |
 
+<p align="center"><img src="screenshots/foundry-hotbar.png" alt="The hotbar after the installation: the five trait rolls, the palette, Spend a Benny, Private message and, for the GM, Give Bennies." width="520"></p>
+
 You can run `install-macros.js` again at any time to update the macros: it never renames a macro you
 renamed. To remove everything, execute [`uninstall-macros.js`](uninstall-macros.js). Refresh the page
 (F5) after each installation.
@@ -67,15 +69,21 @@ renamed. To remove everything, execute [`uninstall-macros.js`](uninstall-macros.
 
 ## The macros
 
+> The screenshots use the French interface of Foundry; the cards and windows follow the language of each player.
+
 ### Trait rolls (d4 to d12)
 
 One click rolls a **trait die** and the **Wild Die** (a d6), both exploding, and keeps the better one.
 The result is a chat card with one line per die (an exploded die shows `8💥 + 3 = 11`).
 
+<p align="center"><img src="screenshots/trait-roll.png" alt="A trait roll: the card as it appears, before the final roll" width="700"></p>
+
 Under the total, the person who rolled (and the GM) can set a **Modifier** (−6 to +6) and a
 **Target Number** (4 by default) with the − and + buttons, then click **Final roll**. The card then shows
 the modified dice, **Success** or **Failure** (green or red), and one **raise** for each full 4 points
 above the target number. The button becomes **Adjust**, to change the values again.
+
+<p align="center"><img src="screenshots/roll-adjustments.png" alt="The card after Final roll: modified dice, result, raise, and the Adjust button" width="300"></p>
 
 - A die never goes below 1, whatever the modifier (`5 − 6 → 1`).
 - **Double 1**: if both dice show 1, the total is replaced by a 💀 (critical failure). The card cannot be
@@ -91,11 +99,15 @@ the **Wild Die**.
   With several dice, or the Wild Die alone, the roll is a **free roll**: the dice are added up, the
   modifier is added once, and the target number is 0 by default (no result shown until you set one).
 
+<p align="center"><img src="screenshots/dice-palette.png" alt="The dice palette" width="600"></p>
+
 ### Private message
 
 Send a private message to another connected player (or to the GM). It arrives as a card with a **Reply**
 button. The cursor goes straight to the text field, both when writing and when replying. The recipient,
 and only the recipient, hears a short sound.
+
+<p align="center"><img src="screenshots/get-private-message.png" alt="A private message received, with its Reply button" width="330"> <img src="screenshots/reply-private-message.png" alt="The window to reply" width="560"></p>
 
 ### Spend a Benny
 
@@ -103,6 +115,8 @@ One click spends a Benny of your assigned character (the GM spends the GM's own 
 system: the Benny count, the Dice So Nice animation and the SWADE rules are all handled by the system.
 A card tells everybody who spent one and **how many Bennies are left**, in bold when there is one left and
 in red when there is none.
+
+<p align="center"><img src="screenshots/spend-benny.png" alt="A Benny spent, with the number of Bennies left" width="600"></p>
 
 If you **own several characters**, a small window asks which character spends the Benny (a character
 with no Benny left is greyed out; your assigned character is chosen by default).
@@ -112,6 +126,8 @@ with no Benny left is greyed out; your assigned character is chosen by default).
 A window with the avatars of the characters of the **connected players**. Click the characters who get a
 Benny, click a player's name to choose all of their characters, or click **All**, then **Give**. Each
 chosen character gets one Benny, and one chat card lists who got one.
+
+<p align="center"><img src="screenshots/give-benny.png" alt="Give Bennies to players: the characters to pick, and the All tile" width="560"></p>
 
 The characters offered are the ones a connected player **owns** (a player can own several). Give the
 players the *Owner* permission on their characters in Foundry.
