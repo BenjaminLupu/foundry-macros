@@ -1,6 +1,5 @@
 {
   "benny.api_missing": "This macro needs a more recent SWADE system (User#spendBenny is missing).",
-  "benny.everyone": "Everyone gets a Benny!",
   "benny.no_character": "You have no assigned character, so you have no Bennies.",
   "benny.none_left": "You have no Benny left.",
   "benny.not_allowed": "You are not allowed to spend this Benny.",

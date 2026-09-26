@@ -28,7 +28,6 @@ d'automatisation, une table qui reste active).
 | `build/` | Le script de build et les modèles des deux fichiers générés |
 | `lang/` | Les traductions |
 | `icons/`, `sounds/` | Les icônes (SVG) et les sons, embarqués dans l'installeur |
-| `dist/` | Une copie générée et traduite de `give-a-benny-to-connected-players.js` (une ancienne macro, collée à la main, non installée) |
 
 Les macros sont de simples **macros script** de Foundry : pas de module à nous, rien à installer sur le
 serveur. Un meneur de jeu colle `install-macros.js` dans une macro et l'exécute. Tout le reste vit dans les

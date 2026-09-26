@@ -21,9 +21,8 @@ the timestamp.
 
 Translations: the texts live in lang/<code>.json (see lang/README.md). The sources
 call t("key", {values}); the build puts, at the top of each macro, the texts that
-macro uses and the t() function, so the macros need nothing else in Foundry. The
-macros that install-macros.js does not install (STANDALONE) are written, translated,
-in dist/ to be pasted by hand. Every run checks the translations: an unknown or
+macro uses and the t() function, so the macros need nothing else in Foundry. Every
+run checks the translations: an unknown or
 non-literal key, or a {value} that differs from English, is an error; a text missing
 from a language is a warning (English is used).
 
@@ -75,10 +74,6 @@ OUTPUTS = {
     "install-macros.js": "install-macros.template.js",
     "uninstall-macros.js": "uninstall-macros.template.js",
 }
-
-# Macros that are not installed by install-macros.js (they are pasted by hand into Foundry): the
-# build writes a ready-to-paste copy, with its translations, in dist/.
-STANDALONE = ["give-a-benny-to-connected-players.js"]
 
 # --- Translations ---------------------------------------------------------------------------
 # lang/<code>.json: flat {"key": "text"} files, the same format as Foundry's own lang files
@@ -241,23 +236,9 @@ def render(template_name):
     return text
 
 
-STANDALONE_BANNER = (
-    "/* Generated on __GENERATED_AT__\n"
-    "   GENERATED FILE: do not edit. Edit {source} (or lang/*.json), then run: python build/build.py */\n\n"
-)
-
-
-def render_standalone(source):
-    """A macro that is pasted by hand into Foundry: its source with its translations."""
-    return STANDALONE_BANNER.format(source=source) + macro_command(source)
-
-
 def expected_outputs():
     """Every generated file (path relative to the repository root -> content)."""
-    outputs = {name: render(template) for name, template in OUTPUTS.items()}
-    for source in STANDALONE:
-        outputs[f"dist/{source}"] = render_standalone(source)
-    return outputs
+    return {name: render(template) for name, template in OUTPUTS.items()}
 
 
 def dump_commands(directory):
@@ -265,7 +246,7 @@ def dump_commands(directory):
     to test the macros as they run."""
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
-    for source in [m["source"] for m in MACROS] + STANDALONE:
+    for source in [m["source"] for m in MACROS]:
         (directory / source).write_text(macro_command(source), encoding="utf-8", newline="\n")
         print(f"{directory / source}")
 
@@ -281,7 +262,7 @@ def i18n_problems():
     if reference is None:
         return [f"lang/{DEFAULT_LANGUAGE}.json est introuvable"], []
 
-    sources = [(s, read_text(ROOT / s)) for s in [m["source"] for m in MACROS] + STANDALONE]
+    sources = [(s, read_text(ROOT / s)) for s in [m["source"] for m in MACROS]]
     sources += [(f"build/{template}", read_text(BUILD / template)) for template in OUTPUTS.values()]
     used = set(name_keys())
     for label, text in sources:

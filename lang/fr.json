@@ -1,6 +1,5 @@
 {
   "benny.api_missing": "Cette macro nécessite une version plus récente du système SWADE (User#spendBenny est introuvable).",
-  "benny.everyone": "Vous gagnez tous un Jeton !",
   "benny.no_character": "Aucun personnage ne t'est assigné : tu n'as pas de jetons.",
   "benny.none_left": "Tu n'as plus de jeton.",
   "benny.not_allowed": "Tu n'as pas le droit de dépenser ce jeton.",

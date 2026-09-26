@@ -27,7 +27,6 @@ what the macros do and the intent behind them (little automation, a table that s
 | `build/` | The build script and the templates of the two generated files |
 | `lang/` | The translations |
 | `icons/`, `sounds/` | The icons (SVG) and the sounds, embedded in the installer |
-| `dist/` | A generated, translated copy of `give-a-benny-to-connected-players.js` (an older macro, pasted by hand, not installed) |
 
 The macros are plain Foundry **script macros**: no module of our own, nothing to install on the server. A
 Game Master pastes `install-macros.js` in a macro and runs it. Everything else lives in the world's
